@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 project(practica-sistemas-percepcion-mayr)
 
-find_package(OpenCV 2.4 REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(Boost 1.5 COMPONENTS program_options)
 
 include_directories(${Boost_INCLUDE_DIR})
