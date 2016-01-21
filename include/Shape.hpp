@@ -31,11 +31,18 @@ public:
     return cv::Point(centroid.second, centroid.first);
   }
 
-  std::string getSemanticAverageColor()
+  std::string getSemanticAverageColorHSV()
   {
     PointXY point_ = getAverageColor();
-    return point_.getSemanticColor();
+    return point_.getSemanticColorHSV();
   }
+
+   std::string getSemanticAverageColorLAB()
+  {
+    PointXY point_ = getAverageColor();
+    return point_.getSemanticColorLAB();
+  }
+
 
   PointXY getAverageColor()
   {

@@ -46,7 +46,7 @@ public:
     if (hue < 330)  return "Magenta";
   }
 
-  std::string getSemantivColorLAB()
+  std::string getSemanticColorLAB()
   {
     return "NONE";
   }

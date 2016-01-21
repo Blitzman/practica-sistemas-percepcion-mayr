@@ -4,9 +4,6 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
-
-#include "PointXYLAB.hpp"
-#include "PointXYHSL.hpp"
 #include "Shape.hpp"
 
 class ImageColorSegmentation
@@ -97,7 +94,7 @@ cv::Mat processFrame()
   // Watershed algorithm
   cv::watershed(image_color_, markers);
 
-  std::vector<Shape<PointXY> > shapes(max);
+  std::vector<Shape> shapes(max);
   
   // List of shapes
   
@@ -124,7 +121,7 @@ cv::Mat processFrame()
             {
               if (markers.at<int>(i,j) == l) // shape
                 {
-                  PointXYHSL p(i,j, color_HSV.at<cv::Vec3b>(i,j)[0], color_HSV.at<cv::Vec3b>(i,j)[1], color_HSV.at<cv::Vec3b>(i,j)[2]);
+                  PointXY p(i,j, color_HSV.at<cv::Vec3b>(i,j)[0], color_HSV.at<cv::Vec3b>(i,j)[1], color_HSV.at<cv::Vec3b>(i,j)[2]);
 
                   shapes[l-2].push_back(p);
 
@@ -138,7 +135,7 @@ cv::Mat processFrame()
   for(int i = 0; i < max; i++) // color classification, centroid calcs and outputs
     {
       cv::Point c = shapes[i].getCentroid();
-      std::string semColor = shapes[i].getSemanticAverageColor();
+      std::string semColor = shapes[i].getSemanticAverageColorHSV();
 
       std::cout << "(" << c.x << ", " << c.y << ") " << semColor << std::endl;
 
