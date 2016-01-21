@@ -11,8 +11,8 @@ class Shape
 public:
 
   Shape()
-  {
-
+	{
+		m_radius = -1;
   }
 
   cv::Point getCentroid()
@@ -36,6 +36,8 @@ public:
 		std::string shape_name_ = "unk";
 		unsigned int v_ = m_vertices.size();
 
+		if (m_radius > 0)
+			shape_name_ = "circle";
 		if (v_ == 3)
 			shape_name_ = "triangle";
 		else if (v_ == 4)
@@ -46,8 +48,6 @@ public:
 			shape_name_ = "hexagon";
 		else if (v_ == 12)
 			shape_name_ = "star";
-		else if (v_ > 6)
-			shape_name_ = "circle";
 		
 		return shape_name_;
 	}
@@ -83,6 +83,11 @@ public:
     return color_avg_;
   }
 
+	void set_radius(const int & crRadius)
+	{
+		m_radius = crRadius;
+	}
+
   void add_point(PointXY point)
   {
     m_point_list.push_back(point);
@@ -95,13 +100,21 @@ public:
 
   void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
   {
-    for (unsigned int i = 0; i < m_vertices.size()-1; ++i)
+		if (m_radius > 0.0)
+		{
+			cv::circle(rImage, m_vertices[0], 3, crColor, -1, 8, 0 );
+			cv::circle(rImage, m_vertices[0], m_radius, crColor, 3, 8, 0);
+		}
+		else
+		{
+			for (unsigned int i = 0; i < m_vertices.size()-1; ++i)
       {
         cv::line(rImage, m_vertices[i], m_vertices[i+1], crColor, 10);
       }
 
-    if (m_vertices.size() > 2)
-      cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
+			if (m_vertices.size() > 2)
+				cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
+		}
   }
 
 	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor)
@@ -112,7 +125,7 @@ public:
 private:
   std::vector<PointXY> m_point_list;
   std::vector<cv::Point> m_vertices;
-
+	int m_radius;
 };
 
 #endif
