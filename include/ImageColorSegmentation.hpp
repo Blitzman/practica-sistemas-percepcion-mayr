@@ -123,7 +123,7 @@ cv::Mat processFrame()
                 {
                   PointXY p(i,j, color_HSV.at<cv::Vec3b>(i,j)[0], color_HSV.at<cv::Vec3b>(i,j)[1], color_HSV.at<cv::Vec3b>(i,j)[2]);
 
-                  shapes[l-2].push_back(p);
+                  shapes[l-2].add_point(p);
 
                   color_mask.at<cv::Vec3b>(i,j) = cv::Vec3b(127,0,0);
                 }
