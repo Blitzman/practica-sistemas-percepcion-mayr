@@ -65,6 +65,17 @@ public:
     m_vertices.push_back(crVertex);
   }
 
+	void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
+	{
+		for (unsigned int i = 0; i < m_vertices.size()-1; ++i)
+		{
+			cv::line(rImage, m_vertices[i], m_vertices[i+1], crColor, 10);
+		}
+
+		if (m_vertices.size() > 2)
+			cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
+	}
+
 private:
   std::vector<PointXY> m_point_list;
   std::vector<cv::Point> m_vertices;
