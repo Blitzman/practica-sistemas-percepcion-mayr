@@ -10,13 +10,15 @@ class PointXY
 public:
   unsigned short x;
   unsigned short y;
-  PointXY(unsigned short, unsigned short);
+
+	PointXY(unsigned short x, unsigned short y)
+	{
+		this->x = x;
+	  this->y = y;
+	}
+
+	virtual std::string getSemanticColor() = 0;
 };
 
-PointXY::PointXY(unsigned short x, unsigned short y)
-{
-  this->x = x;
-  this->y = y;
-}
 
 #endif
