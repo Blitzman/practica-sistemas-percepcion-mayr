@@ -1,25 +1,28 @@
-#include "header_test.hpp"
+#include "ImageShapeSegmentation.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
-int main(int argc, char** argv )
+int main(int argc, char** argv)
 {
-	cv::Mat image_;
-	image_ = cv::imread("lena.jpg", 1);
+	ImageShapeSegmentation iss_(1, "../../../resources/Video_2/output-%04d.jpg");
+	//ImageShapeSegmentation iss_(0, "../../../resources/Picture_21.jpg");
 
-	foo();
+	cv::Mat frame_;
+	cv::Size size_(640, 480);
+	iss_.process(frame_);
 
-	if (!image_.data)
+	while (iss_.process(frame_))
 	{
-		std::cout << "No image data \n";
-		return -1;
+		std::cout << "Processing frame...\n";
+	    cv::Mat color_resized_;
+	    resize(frame_, color_resized_, size_);
+	    cv::namedWindow("ShapeSegmentation", cv::WINDOW_NORMAL);
+	    cv::imshow("ShapeSegmentation", color_resized_);
+			cv::waitKey(0);
 	}
 
-	cv::namedWindow("Display Image", cv::WINDOW_AUTOSIZE);
-	cv::imshow("Display Image", image_);
-
-	cv::waitKey(0);
+  cv::waitKey(0);
 
 	return 0;
 }
