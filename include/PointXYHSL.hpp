@@ -4,29 +4,28 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "PointXY.hpp"
 
-class PointXYHSL
+class PointXYHSL : public PointXY
 {
-	public:
-		int x;
-		int y;
-		int h;
-		int s;
-		int v;
-		PointXYHSL(int, int, int, int, int);
-
+public:
+  PointXYHSL(unsigned short, unsigned short, unsigned short, unsigned short, unsigned short);
+  PointXYHSL();
+  unsigned short values[3] = {0,0,0};
+  
 };
 
-PointXYHSL::PointXYHSL(int x_, int y_, int h_, int s_, int v_)
+PointXYHSL::PointXYHSL():PointXY(0,0)
 {
-	x = x_;
-	y = y_;
-	h = h_;
-	s = s_;
-	v = v_;
+  
 }
 
-
+PointXYHSL::PointXYHSL(unsigned short x_, unsigned short y_, unsigned short h_, unsigned short s_, unsigned short v_): PointXY(x_,y_)
+{
+  values[0] = h_;
+  values[1] = s_;
+  values[2] = v_;
+}
 
 
 #endif
