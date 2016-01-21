@@ -4,8 +4,6 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include "PointXYHSL.hpp"
-#include "PointXYLAB.hpp"
 
 template <class T> class Shape
 {
@@ -20,13 +18,14 @@ public:
 	{
 	  std::pair<int,int> centroid;
 
-		for(int i = 0; i < pointList.size(); i++)
+		for(int i = 0; i < m_point_list.size(); i++)
     {
-      centroid.first += pointList[i].x;
-      centroid.second += pointList[i].y;
+      centroid.first += m_point_list[i].x;
+      centroid.second += m_point_list[i].y;
     }
-	  centroid.first /= pointList.size();
-		centroid.second /= pointList.size();
+
+	  centroid.first /= m_point_list.size();
+		centroid.second /= m_point_list.size();
 
 	  return cv::Point(centroid.second, centroid.first);
 	}
@@ -40,31 +39,35 @@ public:
 	T getAverageColor()
 	{
 		T color_avg_;
-	  for(int i = 0; i < pointList.size(); i++)
+
+	  for(int i = 0; i < m_point_list.size(); i++)
     {
-      color_avg_.values[0] += pointList[i].values[0];
-      color_avg_.values[1] += pointList[i].values[1];
-      color_avg_.values[2] += pointList[i].values[2];
+      color_avg_[0] += m_point_list.values[0];
+      color_avg_[1] += m_point_list.values[1];
+      color_avg_[2] += m_point_list.values[2];
     }
 
-		color_avg_.values[0] /= pointList.size();
-	  color_avg_.values[1] /= pointList.size();
-		color_avg_.values[2] /= pointList.size();
+		color_avg_[0] /= m_point_list.size();
+	  color_avg_[1] /= m_point_list.size();
+		color_avg_[2] /= m_point_list.size();
 
 	  return color_avg_;
 	}
 
-	bool push_back(T point)
+	void add_point(T point)
 	{
-    pointList.push_back(point);
+    m_point_list.push_back(point);
+	}
+
+	void add_vertex (const cv::Point & crVertex)
+	{
+		m_vertices.push_back(crVertex);
 	}
 
 private:
-  std::vector<T> pointList;
+  std::vector<T> m_point_list;
+	std::vector<cv::Point> m_vertices;
 
 };
-
-
-
 
 #endif
