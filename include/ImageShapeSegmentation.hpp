@@ -5,7 +5,7 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 
-#include "PointXYHSL.hpp"
+#include "PointXY.hpp"
 #include "Shape.hpp"
 
 class ImageShapeSegmentation
@@ -90,25 +90,20 @@ private:
 
 		std::vector<std::vector<cv::Point>> contours_;
 		cv::Mat contour_output_ = opening_.clone();
-		cv::findContours(contour_output_, contours_, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+		cv::findContours(contour_output_, contours_, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
 		std::vector<std::vector<cv::Point>> contours_poly_(contours_.size());
+		std::vector<Shape> shapes_(contours_.size());
+
 		for (unsigned int i = 0; i < contours_.size(); ++i)
 		{
 			cv::approxPolyDP(cv::Mat(contours_[i]), contours_poly_[i], cv::arcLength(contours_[i], true)*0.02, true);
-			
-			if (contours_poly_[i].size() == 3)
-			{
-				std::cout << "Detected triangle...\n";
-			}
+		
+			for (cv::Point p_: contours_poly_[i])
+				shapes_[i].add_vertex(p_);
 
-			for (unsigned int j = 0; j < contours_poly_[i].size()-1; ++j)
-			{
-				cv::line(image_color_, contours_poly_[i][j], contours_poly_[i][j+1], cv::Scalar(0,0,i*255/contours_.size()), 10);
-			}
-			
-			if (contours_poly_[i].size() > 2)
-				cv::line(image_color_, contours_poly_[i][contours_poly_[i].size()-1], contours_poly_[i][0], cv::Scalar(0,0,i*255/contours_.size()), 10);
+			shapes_[i].draw_contour(image_color_, cv::Scalar(0, 0, i * 255 / contours_.size()));
+			shapes_[i].draw_name(image_color_, cv::Scalar(0, 0, i * 255 / contours_.size()));
 		}
 
 		// Sure BG area, by applying mat morph (dilate) you assure that BG is in fact BG

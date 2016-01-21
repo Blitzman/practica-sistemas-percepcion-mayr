@@ -4,89 +4,115 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
-#include "PointXYHSL.hpp"
+#include "PointXY.hpp"
 
 class Shape
 {
-	private:
-		std::vector<PointXYHSL> pointList;
+public:
 
-	public:
-		//Shape(int t);
-		Shape();
-		Shape(std::vector<PointXYHSL>);
-		cv::Point getCentroid();
-		cv::Vec3i getAverageColor();
-		bool push_back(PointXYHSL);
-		std::string getSemanticAverageColor();
+  Shape()
+  {
 
-};
+  }
 
-Shape::Shape()
-{
-
-}
-
-cv::Point Shape::getCentroid()
-{
-
+  cv::Point getCentroid()
+  {
     std::pair<int,int> centroid;
 
-    for(int i = 0; i < pointList.size(); i++)
-    {
-        centroid.first += pointList[i].x;
-        centroid.second += pointList[i].y;
-    }
-    centroid.first /= pointList.size();
-    centroid.second /= pointList.size();
+    for(unsigned short i = 0; i < m_point_list.size(); ++i)
+      {
+        centroid.first += m_point_list[i].x;
+        centroid.second += m_point_list[i].y;
+      }
+
+    centroid.first /= m_point_list.size();
+    centroid.second /= m_point_list.size();
 
     return cv::Point(centroid.second, centroid.first);
+  }
 
-}
-
-std::string Shape::getSemanticAverageColor()
-{
-	cv::Vec3i c = getAverageColor();
-    float hue = c[0];
-    float sat = c[2];
-    float lgt = c[1];
-
-    if (lgt < 0.2)  return "Black";
-    //if (lgt > 0.8)  return "Whites";
-
-    if (sat < 0.25) return "Gray";
-
-    if (hue < 30)   return "Red";
-    //if (hue < 90)   return "Yellows";
-    if (hue < 150)  return "Green";
-    if (hue < 210)  return "Cyan";
-    if (hue < 270)  return "Blue";
-    if (hue < 330)  return "Magent";
-
-    return "Red";
-}
-
-cv::Vec3i Shape::getAverageColor()
-{
-	cv::Vec3i colorAvg;
-	for(int i = 0; i < pointList.size(); i++)
+	std::string get_semantic_shape()
 	{
-		colorAvg[0] += pointList[i].h;
-        colorAvg[1] += pointList[i].s;
-        colorAvg[2] += pointList[i].v;
+		std::string shape_name_ = "unk";
+		unsigned int v_ = m_vertices.size();
+
+		if (v_ == 3)
+			shape_name_ = "triangle";
+		else if (v_ == 4)
+			shape_name_ = "square";
+		else if (v_ == 5)
+			shape_name_ = "pentagon";
+		else if (v_ == 6)
+			shape_name_ = "hexagon";
+		else if (v_ == 12)
+			shape_name_ = "star";
+		else if (v_ > 6)
+			shape_name_ = "circle";
+		
+		return shape_name_;
 	}
-	colorAvg[0] /= pointList.size();
-	colorAvg[1] /= pointList.size();
-	colorAvg[2] /= pointList.size();
 
-	return colorAvg;
-}
+  std::string getSemanticAverageColorHSV()
+  {
+    PointXY point_ = getAverageColor();
+    return point_.getSemanticColorHSV();
+  }
 
-bool Shape::push_back(PointXYHSL point)
-{
-	pointList.push_back(point);
-	return true;
-}
+   std::string getSemanticAverageColorLAB()
+  {
+    PointXY point_ = getAverageColor();
+    return point_.getSemanticColorLAB();
+  }
 
+
+  PointXY getAverageColor()
+  {
+    PointXY color_avg_;
+
+    for(unsigned short i = 0; i < m_point_list.size(); ++i)
+      {
+        color_avg_.values[0] += m_point_list[i].values[0];
+        color_avg_.values[1] += m_point_list[i].values[1];
+        color_avg_.values[2] += m_point_list[i].values[2];
+      }
+
+    color_avg_.values[0] /= m_point_list.size();
+    color_avg_.values[1] /= m_point_list.size();
+    color_avg_.values[2] /= m_point_list.size();
+
+    return color_avg_;
+  }
+
+  void add_point(PointXY point)
+  {
+    m_point_list.push_back(point);
+  }
+
+  void add_vertex (const cv::Point & crVertex)
+  {
+    m_vertices.push_back(crVertex);
+  }
+
+  void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
+  {
+    for (unsigned int i = 0; i < m_vertices.size()-1; ++i)
+      {
+        cv::line(rImage, m_vertices[i], m_vertices[i+1], crColor, 10);
+      }
+
+    if (m_vertices.size() > 2)
+      cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
+  }
+
+	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor)
+	{
+		cv::putText(rImage, get_semantic_shape(), m_vertices[0], cv::FONT_HERSHEY_SIMPLEX, 5, crColor, 5);
+	}
+
+private:
+  std::vector<PointXY> m_point_list;
+  std::vector<cv::Point> m_vertices;
+
+};
 
 #endif
