@@ -12,33 +12,12 @@
 class ImageColorSegmentation
 {
 
-private:
-  int ics_format;            // Whether IMAGE or VIDEO input
-  std::string path;          // Path to resource
-  cv::Mat image_;            // Current image or frame
-  cv::Mat image_color_;      // Converted to HSL
-  cv::Mat sure_bg_;          // Sure Background area
-  cv::Mat sure_fg_;          // Sure Foreground area
-  cv::Mat unknown_;          // Unknown area between surefg and surebg
-
-  cv::VideoCapture vcap;      // Video stream
-
-  cv::Mat processFrame();     // Process the current frame
-
-
 public:
 
   static const int ICS_IMAGE = 0;        // Image source
   static const int ICS_VIDEO = 1;        // Video source
 
-  ImageColorSegmentation(int ics_format, std::string path);
-
-  bool process(cv::Mat &mat);            // Process the current frame and returns the color mask
-	
-
-};
-
-ImageColorSegmentation::ImageColorSegmentation(int ics_format, std::string path)
+ImageColorSegmentation(int ics_format, std::string path)
 {
   this->ics_format = ics_format;
   this->path = path;
@@ -53,7 +32,7 @@ ImageColorSegmentation::ImageColorSegmentation(int ics_format, std::string path)
   }
 }
 
-cv::Mat ImageColorSegmentation::processFrame()
+cv::Mat processFrame()
 {
 
   if (!image_.data)
@@ -118,11 +97,10 @@ cv::Mat ImageColorSegmentation::processFrame()
   // Watershed algorithm
   cv::watershed(image_color_, markers);
 
-
+  std::vector<Shape<PointXY> > shapes(max);
+  
   // List of shapes
-	//TODO:
-  std::vector<Shape<PointXYHSL> > shapes(max);
-
+  
   // Convert color image to HSV Scheme for easier color classfication
   cv::Mat color_HSV;
   cvtColor(image_color_, color_HSV, cv::COLOR_BGR2HLS);
@@ -174,7 +152,7 @@ cv::Mat ImageColorSegmentation::processFrame()
 
 }
 
-bool ImageColorSegmentation::process(cv::Mat &frame)
+bool process(cv::Mat &frame)
 {
 
   if(ics_format == 1) // VIDEO stream
@@ -197,6 +175,22 @@ bool ImageColorSegmentation::process(cv::Mat &frame)
  
   return true;
 }
+
+  
+private:
+  int ics_format;            // Whether IMAGE or VIDEO input
+  unsigned short ics_color;  // Whether HSV or LAB format color
+  std::string path;          // Path to resource
+  cv::Mat image_;            // Current image or frame
+  cv::Mat image_color_;      // Converted to HSL
+  cv::Mat sure_bg_;          // Sure Background area
+  cv::Mat sure_fg_;          // Sure Foreground area
+  cv::Mat unknown_;          // Unknown area between surefg and surebg
+
+  cv::VideoCapture vcap;      // Video stream
+
+ 
+};
 
 
 

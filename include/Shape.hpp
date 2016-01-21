@@ -4,69 +4,70 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "PointXY.hpp"
 
-template <class T> class Shape
+class Shape
 {
 public:
 
-	Shape()
-	{
+  Shape()
+  {
 
-	}
+  }
 
-	cv::Point getCentroid()
-	{
-	  std::pair<int,int> centroid;
+  cv::Point getCentroid()
+  {
+    std::pair<int,int> centroid;
 
-		for(int i = 0; i < m_point_list.size(); i++)
-    {
-      centroid.first += m_point_list[i].x;
-      centroid.second += m_point_list[i].y;
-    }
+    for(unsigned short i = 0; i < m_point_list.size(); ++i)
+      {
+        centroid.first += m_point_list[i].x;
+        centroid.second += m_point_list[i].y;
+      }
 
-	  centroid.first /= m_point_list.size();
-		centroid.second /= m_point_list.size();
+    centroid.first /= m_point_list.size();
+    centroid.second /= m_point_list.size();
 
-	  return cv::Point(centroid.second, centroid.first);
-	}
+    return cv::Point(centroid.second, centroid.first);
+  }
 
-	std::string getSemanticAverageColor()
-	{
-		T point_ = getAverageColor();
-		return point_.getSemanticColor();
-	}
+  std::string getSemanticAverageColor()
+  {
+    PointXY point_ = getAverageColor();
+    return point_.getSemanticColor();
+  }
 
-	T getAverageColor()
-	{
-		T color_avg_;
+  PointXY getAverageColor()
+  {
+    PointXY color_avg_;
 
-	  for(int i = 0; i < m_point_list.size(); i++)
-    {
-      color_avg_[0] += m_point_list.values[0];
-      color_avg_[1] += m_point_list.values[1];
-      color_avg_[2] += m_point_list.values[2];
-    }
+    for(unsigned short i = 0; i < m_point_list.size(); ++i)
+      {
+        color_avg_.values[0] += m_point_list[i].values[0];
+        color_avg_.values[1] += m_point_list[i].values[1];
+        color_avg_.values[2] += m_point_list[i].values[2];
+      }
 
-		color_avg_[0] /= m_point_list.size();
-	  color_avg_[1] /= m_point_list.size();
-		color_avg_[2] /= m_point_list.size();
+    color_avg_.values[0] /= m_point_list.size();
+    color_avg_.values[1] /= m_point_list.size();
+    color_avg_.values[2] /= m_point_list.size();
 
-	  return color_avg_;
-	}
+    return color_avg_;
+  }
 
-	void add_point(T point)
-	{
+  void add_point(PointXY point)
+  {
     m_point_list.push_back(point);
-	}
+  }
 
-	void add_vertex (const cv::Point & crVertex)
-	{
-		m_vertices.push_back(crVertex);
-	}
+  void add_vertex (const cv::Point & crVertex)
+  {
+    m_vertices.push_back(crVertex);
+  }
 
 private:
-  std::vector<T> m_point_list;
-	std::vector<cv::Point> m_vertices;
+  std::vector<PointXY> m_point_list;
+  std::vector<cv::Point> m_vertices;
 
 };
 
