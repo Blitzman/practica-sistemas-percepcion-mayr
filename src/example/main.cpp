@@ -1,41 +1,27 @@
-#include "ImageColorSegmentation.hpp"
+#include "ImageShapeSegmentation.hpp"
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
-
-
-int main(int argc, char** argv )
+int main(int argc, char** argv)
 {
+	ImageShapeSegmentation iss_(1, "../../../resources/Video_1/output-%04d.jpg");
 
-	/*
-		Example of color segmentation for a video source 
-	*/
-    ImageColorSegmentation ics(ImageColorSegmentation::ICS_VIDEO, "../resources/Video_1/output-%04d.jpg");
+	cv::Mat frame_;
+	cv::Size size_(640, 480);
+	iss_.process(frame_);
 
-    cv::Mat frame;
-    cv::Size size(640, 480);
-    ics.process(frame);
-	while (ics.process(frame))
+	while (iss_.process(frame_))
 	{
-	    cv::Mat color_resized;
-	    resize(frame, color_resized, size);
-	    cv::namedWindow("ColorSegmentation", cv::WINDOW_NORMAL);
-	    cv::imshow("ColorSegmentation", color_resized);
+		std::cout << "Processing frame...\n";
+	    cv::Mat color_resized_;
+	    resize(frame_, color_resized_, size_);
+	    cv::namedWindow("ShapeSegmentation", cv::WINDOW_NORMAL);
+	    cv::imshow("ShapeSegmentation", color_resized_);
+			cv::waitKey(0);
 	}
 
-
-    cv::waitKey(0);
-
-    /*
-    	Example of color segmentation for a still frame or image input
-    	ImageColorSegmentation ics(ImageColorSegmentation::ICS_IMAGE, "../resources/Picture_17.jpg");
-    	cv::Mat frame;
-    	ics.process(frame);
-    	// Show frame
-
-    */
-
+  cv::waitKey(0);
 
 	return 0;
 }
