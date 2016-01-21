@@ -31,6 +31,27 @@ public:
     return cv::Point(centroid.second, centroid.first);
   }
 
+	std::string get_semantic_shape()
+	{
+		std::string shape_name_ = "unk";
+		unsigned int v_ = m_vertices.size();
+
+		if (v_ == 3)
+			shape_name_ = "triangle";
+		else if (v_ == 4)
+			shape_name_ = "square";
+		else if (v_ == 5)
+			shape_name_ = "pentagon";
+		else if (v_ == 6)
+			shape_name_ = "hexagon";
+		else if (v_ == 12)
+			shape_name_ = "star";
+		else if (v_ > 6)
+			shape_name_ = "circle";
+		
+		return shape_name_;
+	}
+
   std::string getSemanticAverageColorHSV()
   {
     PointXY point_ = getAverageColor();
@@ -82,6 +103,11 @@ public:
     if (m_vertices.size() > 2)
       cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
   }
+
+	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor)
+	{
+		cv::putText(rImage, get_semantic_shape(), m_vertices[0], cv::FONT_HERSHEY_SIMPLEX, 5, crColor, 5);
+	}
 
 private:
   std::vector<PointXY> m_point_list;
