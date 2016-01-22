@@ -77,110 +77,47 @@ private:
 
 		m_image.copyTo(image_);
 		m_image.copyTo(image_color_);
-		cvtColor(image_, image_, cv::COLOR_BGR2GRAY);
 
+		// Edge sharpening with unsharp masking
+		// We use a gaussian smoothing filter and subtract the smoothed version from the
+		// original image in a weighted way so the values of a constant area remain constant
+		cv::Mat blurred_;
+		cv::GaussianBlur(image_, blurred_, cv::Size(0,0), 3);
+		cv::addWeighted(blurred_, 1.5, image_, -0.5, 0, image_);
+
+		// Convert image to grayscale
+		cvtColor(image_, image_, cv::COLOR_BGR2GRAY);
+		
+		// Binary thresholding + OTSU
 		double threshold_value_ =	cv::threshold(image_, image_, 0, 255, cv::THRESH_BINARY_INV+cv::THRESH_OTSU);
 
-    // Removing noises made by shadows/lights by opening
+    // Removing noises made by shadows/lights by opening and closing
 		cv::Mat kernel_ = cv::Mat::ones(cv::Size(3,3), CV_8U);
 		cv::Mat opening_;
 		morphologyEx(image_, opening_, cv::MORPH_OPEN, kernel_, cv::Point(-1,-1), 2);
-
+		morphologyEx(opening_, opening_, cv::MORPH_CLOSE, kernel_, cv::Point(-1,-1), 2);
 		cv::threshold(opening_, opening_, 128, 255, cv::THRESH_BINARY);
 
-		// Sure BG area, by applying mat morph (dilate) you assure that BG is in fact BG
-		/*cv::dilate(opening_, sure_bg_, kernel_, cv::Point(1,1), 3);
-		// Sure foreground area by calculing the distance to the closest zero pixel for each pixel and thresholding by the max distance
-		cv::Mat dist_transform_;
-		distanceTransform(opening_, dist_transform_, CV_DIST_L2, 5);
-		double min_, max_;
-		cv::minMaxLoc(dist_transform_, &min_, &max_);
-		cv::threshold(dist_transform_, sure_fg_, 0.5*max_, 255, 0);
-
-		// Getting unknown region bu subtracting the sureFG from sureBG
-		sure_fg_.convertTo(sure_fg_, CV_8U);
-		subtract(sure_bg_, sure_fg_, unknown_);
-
-		// Labelling the blobs
-		cv::Mat markers_;
-		connectedComponents (sure_fg_, markers_); // Labels the BG as 0 and every blob by numbers 1, 2, 3 ...
-		cv::minMaxLoc(markers_, &min_, &max_);
-		std::cout << "There are " << max_ << " different shapes" << std::endl;
-
-		// Adding 1 to every label to make the background 1 instead of 0
-		cv::Size tam_ = markers_.size();
-		for(int i = 0; i < tam_.height; i++)
-		{
-			for(int j = 0; j < tam_.width; j++)
-			{
-				markers_.at<int>(i,j) = markers_.at<int>(i,j) + 1;
-			}
-		}
-
-		//  Making unknown zones to be labelled as 0
-		for(int i = 0; i < tam_.height; i++)
-		{
-			for(int j = 0; j < tam_.width; j++)
-			{
-				if (unknown_.at<uchar>(i,j) == 255)
-					 markers_.at<int>(i,j) = 0;
-			}
-		}
-
-		// Watershed algorithm
-		cv::watershed(image_color_, markers_);
-
-	  std::vector<Shape> shapes(max_);
-	  // List of shapes
-
-	  // Convert color image to HSV Scheme for easier color classfication
-		cv::Mat color_HSV;
-	  cvtColor(image_color_, color_HSV, cv::COLOR_BGR2HLS);
-
-		// Masking the image with color per BG and SHAPES
-	  cv::Mat color_mask;
-		image_color_.copyTo(color_mask);
-
-	  // Creating the color mask by coloring shapes and BG
-		for(int i = 0; i < tam_.height; i++)
-		{
-			for(int j = 0; j < tam_.width; j++)
-      {
-				if (markers_.at<int>(i,j) == 1) // background
-        {
-					color_mask.at<cv::Vec3b>(i,j) = cv::Vec3b(0,255,0);
-				}
-
-				for(int l = 2; l <= max_+1; l++)
-        {
-					if (markers_.at<int>(i,j) == l) // shape
-					{
-						PointXY p(i,j, color_HSV.at<cv::Vec3b>(i,j)[0], color_HSV.at<cv::Vec3b>(i,j)[1], color_HSV.at<cv::Vec3b>(i,j)[2]);
-						shapes[l-2].add_point(p);
-						color_mask.at<cv::Vec3b>(i,j) = cv::Vec3b(127,0,0);
-					}
-        }
-      }
-    }
-
-		cv::Mat image_grayscale_ = color_mask.clone();
-		cvtColor(image_grayscale_, image_grayscale_, cv::COLOR_BGR2GRAY);*/
-
+		// Find contours
 		std::vector<std::vector<cv::Point>> contours_;
 		cv::Mat contour_output_ = opening_.clone();
-		cv::findContours(contour_output_, contours_, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
+		cv::findContours(contour_output_, contours_, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
 		std::vector<std::vector<cv::Point>> contours_poly_(contours_.size());
 		std::vector<Shape> shapes_(contours_.size());
 
 		for (unsigned int i = 0; i < contours_.size(); ++i)
 		{
-			cv::approxPolyDP(cv::Mat(contours_[i]), contours_poly_[i], cv::arcLength(contours_[i], true)*0.02, true);
+			double precision_factor_ = 0.02;
+			double precision_ = cv::arcLength(contours_[i], true) * precision_factor_;
+			cv::approxPolyDP(cv::Mat(contours_[i]), contours_poly_[i], precision_, true);
 
 			if (contours_poly_[i].size() < 8 || contours_poly_[i].size() == 12)
 			{
 				for (cv::Point p_: contours_poly_[i])
 					shapes_[i].add_vertex(p_);
+
+				shapes_[i].postprocess();
 
 				shapes_[i].draw_contour(image_color_, cv::Scalar(0, 0, i * 255 / contours_.size()));
 				shapes_[i].draw_name(image_color_, cv::Scalar(0, 0, i * 255 / contours_.size()));
@@ -195,7 +132,7 @@ private:
 		std::vector<cv::Vec3f> circles_;			
 		cv::GaussianBlur(opening_, hough_input_, cv::Size(9, 9), 2, 2);
 							
-		cv::HoughCircles(hough_input_, circles_, cv::HOUGH_GRADIENT, 1, opening_.rows/8, (int)threshold_value_/2, (int)threshold_value_/3);//, 0, 600 );
+		cv::HoughCircles(hough_input_, circles_, CV_HOUGH_GRADIENT, 1, opening_.rows/8, (int)threshold_value_/2, (int)threshold_value_/3);//, 0, 600 );
 
 		for(unsigned int i = 0; i < circles_.size(); ++i)
 		{
