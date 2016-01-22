@@ -2,6 +2,7 @@
 #define SHAPE_HPP_
 
 #include <iostream>
+#include <cmath>
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include "PointXY.hpp"
@@ -30,6 +31,24 @@ public:
 
     return cv::Point(centroid.second, centroid.first);
   }
+
+	cv::Point get_vertex_centroid()
+	{
+		cv::Point centroid_;
+		centroid_.x = 0;
+		centroid_.y = 0;
+
+		for (cv::Point p_: m_vertices)
+		{
+			centroid_.x += p_.x;
+			centroid_.y += p_.y;
+		}
+
+		centroid_.x /= m_vertices.size();
+		centroid_.y /= m_vertices.size();
+
+		return centroid_;
+	}
 
 	std::string get_semantic_shape()
 	{
@@ -98,6 +117,34 @@ public:
     m_vertices.push_back(crVertex);
   }
 
+	void postprocess ()
+	{
+		// Not a circle
+		if (m_radius < 0 && m_vertices.size() <= 6)
+		{
+			float avg_side_ = 0.0f;
+			for (unsigned int i = 0; i < m_vertices.size(); ++i)
+			{
+				unsigned int j = (i == m_vertices.size() - 1) ? 0 : i+1;
+				avg_side_ = std::max((float)cv::norm(m_vertices[i]-m_vertices[j]), avg_side_);
+			}
+
+			for (unsigned int i = 0; i < m_vertices.size(); ++i)
+			{
+				unsigned int j = (i == m_vertices.size() - 1) ? 0 : i+1;
+				float side_ = cv::norm(m_vertices[i]-m_vertices[j]);
+
+				if (std::abs(avg_side_ - side_) > avg_side_ * 0.5f)
+				{
+					m_vertices.erase(m_vertices.begin()+i);
+					i--;
+				}
+			}
+
+			m_area = cv::contourArea(m_vertices);
+		}
+	}
+
   void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
   {
 		if (m_radius > 0.0)
@@ -114,18 +161,22 @@ public:
 
 			if (m_vertices.size() > 2)
 				cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
+
+			cv::circle(rImage, get_vertex_centroid(), 3, crColor, -1, 8, 0);
 		}
   }
 
 	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor)
 	{
-		cv::putText(rImage, get_semantic_shape(), m_vertices[0], cv::FONT_HERSHEY_SIMPLEX, 5, crColor, 5);
+		cv::putText(rImage, get_semantic_shape() + ":" + std::to_string(m_area),
+				get_vertex_centroid(), cv::FONT_HERSHEY_SIMPLEX, 3, crColor, 5);
 	}
 
 private:
   std::vector<PointXY> m_point_list;
   std::vector<cv::Point> m_vertices;
 	int m_radius;
+	double m_area;
 };
 
 #endif
