@@ -10,7 +10,7 @@ class PointXY
 public:
   unsigned short x;
   unsigned short y;
-  unsigned short values[3] = {0,0,0};
+  float values[3] = {0,0,0};
   
   PointXY()
   {
@@ -18,7 +18,7 @@ public:
     y = 0;
   }
   
-  PointXY(unsigned short x, unsigned short y, unsigned short value0, unsigned short value1, unsigned short value2)
+  PointXY(unsigned short x, unsigned short y, float value0, float value1, float value2)
   {
     this->x = x;
     this->y = y;
@@ -48,6 +48,19 @@ public:
 
   std::string getSemanticColorLAB()
   {
+    float lig = values[0];
+    float channelA = values[1];
+    float channelB = values[2];
+
+    float limitsRed[6] = 
+      {
+        85.0,160.0,160.0,100.0,171.0,171.0
+      };
+    
+    
+    std::cout<<"1: " <<lig <<"\t 2: " <<channelA <<"\t 3: " <<channelB <<std::endl;
+    if(lig > limitsRed[0] && lig < limitsRed[3] &&  channelA > limitsRed[1] && channelA < limitsRed[4] && channelB > limitsRed[2] && channelB < limitsRed[5]) return "Red";
+    
     return "NONE";
   }
 };
