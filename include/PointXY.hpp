@@ -57,9 +57,20 @@ public:
         85.0,160.0,160.0,100.0,171.0,171.0
       };
     
+    float limitsGreen[6] =
+      {
+        48,-34,38,58,-43,48
+      };
+
+    float limitsBlue[6] =
+      {
+        20,-2,-24,30,8,-34
+      };
     
     std::cout<<"1: " <<lig <<"\t 2: " <<channelA <<"\t 3: " <<channelB <<std::endl;
     if(lig > limitsRed[0] && lig < limitsRed[3] &&  channelA > limitsRed[1] && channelA < limitsRed[4] && channelB > limitsRed[2] && channelB < limitsRed[5]) return "Red";
+    if(lig > limitsBlue[0] && lig < limitsBlue[3] &&  channelA > limitsBlue[1] && channelA < limitsBlue[4] && channelB > limitsBlue[2] && channelB < limitsBlue[5]) return "Blue";
+    if(lig > limitsGreen[0] && lig < limitsGreen[3] &&  channelA > limitsGreen[1] && channelA < limitsGreen[4] && channelB > limitsGreen[2] && channelB < limitsGreen[5]) return "Green";
     
     return "NONE";
   }

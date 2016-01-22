@@ -12,7 +12,7 @@ int main(int argc, char** argv )
   /*
     Example of color segmentation for a video source 
   */
-  ImageColorSegmentation ics(ImageColorSegmentation::ICS_VIDEO,ImageColorSegmentation::ICS_LAB,"../resources/Video_1/output-%04d.jpg");
+  ImageColorSegmentation ics(ImageColorSegmentation::ICS_IMAGE,ImageColorSegmentation::ICS_LAB,"../resources/Picture_30.jpg");//"Video_1/output-%04d.jpg");
 
   cv::Mat frame;
   cv::Size size(640, 480);
