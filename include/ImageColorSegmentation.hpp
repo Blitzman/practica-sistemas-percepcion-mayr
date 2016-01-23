@@ -33,7 +33,6 @@ public:
 
 ImageColorSegmentation::ImageColorSegmentation(std::string path)
 {
-    this->ics_format = ics_format;
     this->path = path;
 
     image_ = cv::imread(path);
@@ -63,6 +62,21 @@ cv::Mat ImageColorSegmentation::processFrame()
     // Convert color image to HSV Scheme for easier color classfication
     cv::Mat color_HSV;
     cvtColor(image_color_, color_HSV, cv::COLOR_BGR2HLS);
+
+    // Correcting the BG whitening it
+    for(int i = 0; i < image_.size().height; i++)
+    {
+        for(int j = 0; j < image_.size().width; j++)
+        {
+            if(color_HSV.at<cv::Vec3b>(i,j)[1] < 13)
+            {
+                color_HSV.at<cv::Vec3b>(i,j)[1] = 200;
+            }
+        }
+    }
+
+    // Back to RGB
+    cvtColor(color_HSV, image_, cv::COLOR_HLS2BGR);
 
     // Convert to grayscale
     cvtColor(image_, image_, cv::COLOR_BGR2GRAY );
