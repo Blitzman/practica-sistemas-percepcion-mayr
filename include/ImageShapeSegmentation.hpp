@@ -143,8 +143,12 @@ private:
 			Shape circle_;
 			circle_.set_radius(radius_);
 			circle_.add_vertex(center_);
-			circle_.draw_contour(image_color_, cv::Scalar(0, 0, 0));
-			circle_.draw_name(image_color_, cv::Scalar(0, 0, 0));
+
+			circle_.postprocess();
+
+			circle_.draw_contour(image_color_, cv::Scalar(0, i * 255 / circles_.size(), 0));
+			circle_.draw_name(image_color_, cv::Scalar(0, i * 255 / circles_.size(), 0));
+
 
 			shapes_.push_back(circle_);
 		}

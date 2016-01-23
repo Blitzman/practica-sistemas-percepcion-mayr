@@ -2,6 +2,7 @@
 #define SHAPE_HPP_
 
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <vector>
 #include <opencv2/opencv.hpp>
@@ -143,6 +144,12 @@ public:
 
 			m_area = cv::contourArea(m_vertices);
 		}
+
+		// A circle
+		if (m_radius > 0)
+		{
+			m_area = (double)M_PI * pow(m_radius, 2);
+		}
 	}
 
   void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
@@ -168,7 +175,11 @@ public:
 
 	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor)
 	{
-		cv::putText(rImage, get_semantic_shape() + ":" + std::to_string(m_area),
+
+		std::ostringstream area_;
+		area_ << std::fixed << std::setprecision(1) << m_area;
+
+		cv::putText(rImage, get_semantic_shape() + ":" + area_.str(),//std::to_string(m_area),
 				get_vertex_centroid(), cv::FONT_HERSHEY_SIMPLEX, 3, crColor, 5);
 	}
 

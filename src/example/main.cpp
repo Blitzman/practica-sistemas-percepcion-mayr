@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv)
 {
-	ImageShapeSegmentation iss_(1, "../../../resources/Video_2/output-%04d.jpg");
+	ImageShapeSegmentation iss_(1, "../resources/Video_5/output-%04d.png");
 	//ImageShapeSegmentation iss_(0, "../../../resources/Picture_21.jpg");
 
 	cv::Mat frame_;
