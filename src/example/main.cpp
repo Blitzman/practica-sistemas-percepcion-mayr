@@ -29,7 +29,7 @@ int main(int argc, char** argv )
         Example of color segmentation for a video source (frames extracted to a folder)
     */
 
-    std::vector<std::string> files = globVector("../resources/*");
+    std::vector<std::string> files = globVector("../resources/Video_4/*");
 
     cv::Size size(640, 480);
     for(int i = 0; i < files.size(); i++)

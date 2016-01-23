@@ -83,11 +83,24 @@ cv::Mat ImageColorSegmentation::processFrame()
     distanceTransform(opening, dist_transform, CV_DIST_L2, 5);
     double min, max;
     cv::minMaxLoc(dist_transform, &min, &max);
-    cv::threshold(dist_transform, sure_fg_, 0.5*max, 255, 0);
+    cv::threshold(dist_transform, sure_fg_, 0.3*max, 255, 0); // Esto se cepilal el triangulillo
 
     // Geeting unknown region bu subtracting the sureFG from sureBG
     sure_fg_.convertTo(sure_fg_, CV_8U);
     subtract(sure_bg_, sure_fg_, unknown_);
+
+
+
+    
+    /*cv::Mat resized;
+    cv::Size size(640, 480);
+    resize(dist_transform, resized, size);
+    cv::imshow("DisplayWindow", resized ); 
+    cv::waitKey(0);*/
+
+
+
+
 
     // Labelling the blobs
     cv::Mat markers;
