@@ -9,7 +9,7 @@
 class Shape
 {
 	private:
-		std::vector<PointXYHSL> pointList;
+		// std::vector<PointXYHSL> pointList;
 
 	public:
 		//Shape(int t);
@@ -20,11 +20,19 @@ class Shape
 		bool push_back(PointXYHSL);
 		std::string getSemanticAverageColor();
 
+        std::vector<PointXYHSL> pointList;
+
+
 };
 
 Shape::Shape()
 {
 
+}
+
+Shape::Shape(std::vector<PointXYHSL> v)
+{
+    pointList = v;
 }
 
 cv::Point Shape::getCentroid()
@@ -51,17 +59,16 @@ std::string Shape::getSemanticAverageColor()
     float sat = c[2];
     float lgt = c[1];
 
-    if (lgt < 0.2)  return "Black";
+    //if (lgt < 0.2)  return "Black";
     //if (lgt > 0.8)  return "Whites";
+    //if (sat < 0.25) return "Gray";
 
-    if (sat < 0.25) return "Gray";
-
-    if (hue < 30)   return "Red";
+    if (hue < 40)   return "Red";
     //if (hue < 90)   return "Yellows";
-    if (hue < 150)  return "Green";
-    if (hue < 210)  return "Cyan";
-    if (hue < 270)  return "Blue";
-    if (hue < 330)  return "Magent";
+    if (hue < 80)  return "Green";
+    //if (hue < 210)  return "Cyan";
+    if (hue < 150)  return "Blue";
+    if (hue < 255)  return "Magent";
 
     return "Red";
 }

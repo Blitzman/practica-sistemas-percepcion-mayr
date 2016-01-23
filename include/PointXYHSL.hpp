@@ -14,8 +14,14 @@ class PointXYHSL
 		int s;
 		int v;
 		PointXYHSL(int, int, int, int, int);
+		PointXYHSL();
 
 };
+
+PointXYHSL::PointXYHSL()
+{
+	
+}
 
 PointXYHSL::PointXYHSL(int x_, int y_, int h_, int s_, int v_)
 {
