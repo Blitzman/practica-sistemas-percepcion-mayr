@@ -22,50 +22,40 @@ private:
     cv::Mat sure_fg_;          // Sure Foreground area
     cv::Mat unknown_;          // Unknown area between surefg and surebg
 
-    cv::VideoCapture vcap;      // Video stream
-
     cv::Mat processFrame();     // Process the current frame
 
 
 public:
-
-    static const int ICS_IMAGE = 0;        // Image source
-    static const int ICS_VIDEO = 1;        // Video source
-
-    ImageColorSegmentation(int ics_format, std::string path);
-
+    ImageColorSegmentation(std::string path);
     bool process(cv::Mat &mat);            // Process the current frame and returns the color mask
-    
 
 };
 
-ImageColorSegmentation::ImageColorSegmentation(int ics_format, std::string path)
+ImageColorSegmentation::ImageColorSegmentation(std::string path)
 {
     this->ics_format = ics_format;
     this->path = path;
 
-    if(ics_format == 0) // FRAME OR SINGLE IMAGE
+    image_ = cv::imread(path);
+
+    if (!image_.data)
     {
-        image_ = cv::imread(path);
-
-    } else {    // VIDEO OR IMAGESET
-
-        vcap = cv::VideoCapture(path);
+        std::cout << "No image data \n";
+        return;
     }
 }
 
+
+// Working hard on the image for color segmentation
 cv::Mat ImageColorSegmentation::processFrame()
 {
 
+    // Reading the frame
     if (!image_.data)
     {
         std::cout << "No image data \n";
         exit(0);
     }
-
-
-    //cv::Size size(2048,1536);
-        //resize(image_, image_, size);
 
 
     image_.copyTo(image_color_);
@@ -79,7 +69,6 @@ cv::Mat ImageColorSegmentation::processFrame()
 
     // Tresholding image binary inverted and otsu's method
     cv::threshold(image_, image_, 0, 255, cv::THRESH_BINARY_INV+cv::THRESH_OTSU);
-
 
     // Removing noises made by shadows/lights by opening
     cv::Mat kernel = cv::Mat::ones(cv::Size(3,3), CV_8U);
@@ -104,7 +93,6 @@ cv::Mat ImageColorSegmentation::processFrame()
     cv::Mat markers;
     connectedComponents (sure_fg_, markers); // Labels the BG as 0 and every blob by numbers 1, 2, 3 ...
     cv::minMaxLoc(markers, &min, &max);
-    // std::cout << "There are " << max << " different shapes" << std::endl;
 
     // Adding 1 to every label to make the background 1 instead of 0
     cv::Size tam = markers.size();
@@ -129,31 +117,16 @@ cv::Mat ImageColorSegmentation::processFrame()
     // Watershed algorithm
     cv::watershed(image_color_, markers);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // Working on HLS image
     std::vector<cv::Mat> hslChan;
-    cv::split(color_HSV, hslChan);
+    cv::split(color_HSV, hslChan); // Splitting channels
 
     std::vector<cv::Mat> outputs(3);
     outputs[0] = cv::Mat(hslChan[0].size().height, hslChan[0].size().width, hslChan[0].type()); // R
     outputs[1] = cv::Mat(hslChan[0].size().height, hslChan[0].size().width, hslChan[0].type()); // G
     outputs[2] = cv::Mat(hslChan[0].size().height, hslChan[0].size().width, hslChan[0].type()); // B
+
+    // Filtering the image to extract red, green or blue data
 
     for(int i = 0; i < hslChan[0].size().height; i++)
     {
@@ -184,28 +157,15 @@ cv::Mat ImageColorSegmentation::processFrame()
         }
     }
 
-
-
-
+    // Dilate to delete rebel pixels in the borders of the shapes
     cv::dilate(outputs[0], outputs[0], kernel, cv::Point(1,1), 3);
     cv::dilate(outputs[1], outputs[1], kernel, cv::Point(1,1), 3);
     cv::dilate(outputs[2], outputs[2], kernel, cv::Point(1,1), 3);
 
-    // Tresholding image binary inverted and otsu's method
+    // Tresholding image otsu's method
     cv::threshold(outputs[0], outputs[0], 0, 255, cv::THRESH_OTSU);
     cv::threshold(outputs[1], outputs[1], 0, 255, cv::THRESH_OTSU);
     cv::threshold(outputs[2], outputs[2], 0, 255, cv::THRESH_OTSU);
-
-
-    // Filtro gaussiana o mediana
-
-    /*cv::erode(outputs[0], outputs[0], kernel, cv::Point(1,1), 3);
-    cv::erode(outputs[1], outputs[1], kernel, cv::Point(1,1), 3);
-    cv::erode(outputs[2], outputs[2], kernel, cv::Point(1,1), 3);*/
-
-
-
-
 
 
 
@@ -215,11 +175,10 @@ cv::Mat ImageColorSegmentation::processFrame()
     max = 0;
 
 
-    // Hay que actualizar para que si el primero va del 1 al 2, el siguiente tiene que ir del 2 a l 3
+    // Tagging the blobs for each color data and updating such tags values
     cv::Mat markersRed;
     connectedComponents (outputs[0], markersRed); // Labels the BG as 0 and every blob by numbers 1, 2, 3 ...
     cv::minMaxLoc(markersRed, &min, &max);
-    std::cout << max << std::endl;
 
     nPiezasRojo = max;
 
@@ -234,7 +193,6 @@ cv::Mat ImageColorSegmentation::processFrame()
         }
     }
     cv::minMaxLoc(markersGreen, &min, &max);
-    std::cout << max << std::endl;
     if(max != 0)
         nPiezasVerde = max;
  
@@ -249,12 +207,12 @@ cv::Mat ImageColorSegmentation::processFrame()
         }
     }
     cv::minMaxLoc(markersBlue, &min, &max);
-    std::cout << max << std::endl;
     if(max != 0)
         nPiezasAzul = max;
 
-    
-    cv::Mat markers2;// = markersRed + markersGreen + markersBlue; // Si hay zonas solapadas falla porque la zona 1 + la zona 2 da 3 y en realidad son otras zonas pero solapadas
+    // This is a simple sum of matrices but if there are overlayed zones caused by the dilating process it puts the correct tag
+    // The common sum will create new/fake tags
+    cv::Mat markers2;
     markersBlue.copyTo(markers2);
     for(int i = 0; i < tam.height; i++)
     {
@@ -274,27 +232,25 @@ cv::Mat ImageColorSegmentation::processFrame()
         }
     }
     cv::minMaxLoc(markers2, &min, &max);
-    std::cout << max << std::endl;
-
 
 
     // List of shapes
-    int nPiezas = max;//nPiezasRojo + nPiezasVerde + nPiezasAzul;
+    int nPiezas = max; 
     std::vector<Shape> shapes(nPiezas);
 
     // Masking the image with color per BG and SHAPES
     cv::Mat color_mask;
     image_color_.copyTo(color_mask);
 
-    // Creating the color mask by coloring shapes and BG
+    // Extracting the shapes by checking only the positions where there are blobs (in grayscale mode)
     for(int i = 0; i < tam.height; i++)
     {
         for(int j = 0; j < tam.width; j++)
         {
             for(int l = 1; l <= nPiezas; l++)
             {
-                if(l == markers2.at<int>(i,j) ) // Esto es que hay pieza
-                {
+                if(l == markers2.at<int>(i,j) ) // This means this pixel is part of a blob / shape
+                {                               // This filter boosts the processing time
                     PointXYHSL p;
                     if( l > 0 and l <= nPiezasRojo )
                     {
@@ -307,7 +263,6 @@ cv::Mat ImageColorSegmentation::processFrame()
                     {
                         p = PointXYHSL(i,j, 100,0,0);  
                     }
-                    // PointXYHSL p(i,j, color_HSV.at<cv::Vec3b>(i,j)[0], color_HSV.at<cv::Vec3b>(i,j)[1], color_HSV.at<cv::Vec3b>(i,j)[2]);
                     shapes[l-1].push_back(p);
                 }
             }
@@ -315,9 +270,8 @@ cv::Mat ImageColorSegmentation::processFrame()
         }
     }
 
-
-    //std::vector<Shape> shapesMod(max);
-    for(int i = 0; i < shapes.size(); i++) // color classification, centroid calcs and outputs
+    // Filtering those shapes which area does not meet a minimun size
+    for(int i = 0; i < shapes.size(); i++) 
     {
         if(shapes[i].pointList.size() < 500)
         {
@@ -329,9 +283,8 @@ cv::Mat ImageColorSegmentation::processFrame()
 
     std::cout << "Numero de piezas " << shapes.size() << std::endl;
 
-    
-
-    for(int i = 0; i < shapes.size(); i++) // color classification, centroid calcs and outputs
+    // color classification, centroid calcs and outputs
+    for(int i = 0; i < shapes.size(); i++) 
     {
         cv::Point c = shapes[i].getCentroid();
         std::string semColor = shapes[i].getSemanticAverageColor();
@@ -344,33 +297,13 @@ cv::Mat ImageColorSegmentation::processFrame()
 
     }
 
-    outputs[0] /= 5;
-    outputs[1] /= 3;
-    outputs[2] /= 1;
-
-    cv::Mat output = outputs[0] + outputs[1] + outputs[2];
     return color_mask;
 
 }
 
+// Calls the color segmentation process. Indirection level added for some preprocessing to be made here.
 bool ImageColorSegmentation::process(cv::Mat &frame)
 {
-
-    if(ics_format == 1) // VIDEO stream
-    {
-        image_ = cv::Mat();
-        if(vcap.read(image_))
-        {
-            if (!image_.data)
-            {
-                std::cout << "No image data \n";
-                return false;
-            }
-
-        }
-        else 
-            return false;
-    }
 
     frame = processFrame();
  

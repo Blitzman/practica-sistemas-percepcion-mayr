@@ -25,15 +25,18 @@ std::vector<std::string> globVector(const string& pattern){
 int main(int argc, char** argv )
 {
 
+    /*
+        Example of color segmentation for a video source (frames extracted to a folder)
+    */
+
     std::vector<std::string> files = globVector("../resources/*");
 
-    //cv::Mat frame;
     cv::Size size(640, 480);
     for(int i = 0; i < files.size(); i++)
     {
         cv::Mat frame;
         std::cout << files[i] << std::endl;
-        ImageColorSegmentation ics(ImageColorSegmentation::ICS_IMAGE, files[i]);
+        ImageColorSegmentation ics(files[i]);
         ics.process(frame);
         cv::Mat color_resized;
         resize(frame, color_resized, size);
@@ -43,34 +46,23 @@ int main(int argc, char** argv )
     }
     cv::waitKey(0); // */
 
-	/*
-		Example of color segmentation for a video source 
-	*/
-    /*ImageColorSegmentation ics(ImageColorSegmentation::ICS_VIDEO, "../resources/Video_1/output-%04d.jpg");
 
-    cv::Mat frame;
-    cv::Size size(640, 480);
-    //ics.process(frame);
-	while (ics.process(frame))
-	{
-	    cv::Mat color_resized;
-	    resize(frame, color_resized, size);
-	    cv::namedWindow("ColorSegmentation", cv::WINDOW_NORMAL);
-	    cv::imshow("ColorSegmentation", color_resized);
-        cv::waitKey(25);
-        frame = cv::Scalar(0,0,0);
-	}
-
-    cv::waitKey(0);*/
 
     /*
     	Example of color segmentation for a still frame or image input
-    	ImageColorSegmentation ics(ImageColorSegmentation::ICS_IMAGE, "../resources/Picture_17.jpg");
+    */
+
+    /*	ImageColorSegmentation ics("../resources/Picture_17.jpg");
     	cv::Mat frame;
     	ics.process(frame);
-    	// Show frame
+        cv::Mat color_resized;
+        cv::Size size(640, 480);
+        resize(frame, color_resized, size);
+    	cv::namedWindow( "DisplayWindow" ); 
+        cv::imshow("DisplayWindow", color_resized ); 
+        cv::waitKey(0);
 
-    */
+    // */
 
 
 	return 0;
