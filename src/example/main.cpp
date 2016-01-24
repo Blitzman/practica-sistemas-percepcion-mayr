@@ -38,7 +38,7 @@ int main(int argc, char** argv )
         std::cout << files[i] << std::endl;
         ImageColorSegmentation ics(files[i]);
         ics.setHistogramOutput(false);
-        ics.process(frame);
+        ics.process(ImageColorSegmentation::HLS, frame);
         cv::Mat color_resized;
         resize(frame, color_resized, size);
         cv::namedWindow( "DisplayWindow" ); // Create a window for display.

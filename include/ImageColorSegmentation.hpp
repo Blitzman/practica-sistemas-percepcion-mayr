@@ -8,7 +8,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#include "PointXYHSL.hpp"
+#include "PointXY.hpp"
 #include "Shape.hpp"
 
 
@@ -25,22 +25,34 @@ private:
     cv::Mat sure_fg_;          // Sure Foreground area
     cv::Mat unknown_;          // Unknown area between surefg and surebg
 
+    int areaFilter;
+
     bool showHistogram;
 
-    cv::Mat processFrame();     // Process the current frame
+    cv::Mat processFrameHLV(cv::Mat &color_HSV, cv::Mat &markers);     // Process the current frame
+    cv::Mat processFrameLAB(cv::Mat &markers, double max);     // Process the current frame
+    cv::Mat preProcessFrame(int hls_lab);
 
 
 public:
     ImageColorSegmentation(std::string path);
-    bool process(cv::Mat &mat);            // Process the current frame and returns the color mask
-    void setHistogramOutput(bool);
+    bool process(int hls_lab, cv::Mat &mat);            // Process the current frame and returns the color mask
+    void setHistogramOutput(bool);                      // Wether show histogram or not
+    void setAreaFilter(int areaFilter);
+
+    static int HLS;
+    static int LAB;
 
 };
+
+int ImageColorSegmentation::HLS = 0;
+int ImageColorSegmentation::LAB = 1;
 
 ImageColorSegmentation::ImageColorSegmentation(std::string path)
 {
     this->path = path;
     showHistogram = false;
+    areaFilter = 1000;
     image_ = cv::imread(path);
 
     if (!image_.data)
@@ -55,11 +67,13 @@ void ImageColorSegmentation::setHistogramOutput(bool v)
     showHistogram = v;
 }
 
-
-// Working hard on the image for color segmentation
-cv::Mat ImageColorSegmentation::processFrame()
+void ImageColorSegmentation::setAreaFilter(int v)
 {
+    areaFilter = v;
+}
 
+cv::Mat ImageColorSegmentation::preProcessFrame(int hls_lab)
+{
     // Reading the frame
     if (!image_.data)
     {
@@ -209,6 +223,21 @@ cv::Mat ImageColorSegmentation::processFrame()
     // Watershed algorithm
     cv::watershed(image_color_, markers);
 
+    cv::Mat ret;
+        if(hls_lab == 0)
+            ret = processFrameHLV(color_HSV, markers);
+        else if (hls_lab == 1)
+            ret = processFrameLAB(markers, max);
+
+
+    return ret;
+}
+
+
+// Working hard on the image for color segmentation
+cv::Mat ImageColorSegmentation::processFrameHLV(cv::Mat &color_HSV, cv::Mat &markers)
+{
+
     // Working on HLS image
     std::vector<cv::Mat> hslChan;
     cv::split(color_HSV, hslChan); // Splitting channels
@@ -249,6 +278,8 @@ cv::Mat ImageColorSegmentation::processFrame()
         }
     }
 
+    cv::Mat kernel = cv::Mat::ones(cv::Size(3,3), CV_8U);
+
     // Dilate to delete rebel pixels in the borders of the shapes
     cv::dilate(outputs[0], outputs[0], kernel, cv::Point(1,1), 3);
     cv::dilate(outputs[1], outputs[1], kernel, cv::Point(1,1), 3);
@@ -264,7 +295,7 @@ cv::Mat ImageColorSegmentation::processFrame()
     int nPiezasRojo = 0;
     int nPiezasVerde = 0;
     int nPiezasAzul = 0;
-    max = 0;
+    double min, max;
 
 
     // Tagging the blobs for each color data and updating such tags values
@@ -306,6 +337,7 @@ cv::Mat ImageColorSegmentation::processFrame()
     // The common sum will create new/fake tags
     cv::Mat markers2;
     markersBlue.copyTo(markers2);
+    cv::Size tam = markers2.size();
     for(int i = 0; i < tam.height; i++)
     {
         for(int j = 0; j < tam.width; j++)
@@ -343,17 +375,17 @@ cv::Mat ImageColorSegmentation::processFrame()
             {
                 if(l == markers2.at<int>(i,j) ) // This means this pixel is part of a blob / shape
                 {                               // This filter boosts the processing time
-                    PointXYHSL p;
+                    PointXY p;
                     if( l > 0 and l <= nPiezasRojo )
                     {
-                        p = PointXYHSL(i,j, 10,0,0);
+                        p = PointXY(i,j, 10,0,0);
                     } else if ( l > 0 and l <= nPiezasVerde )
                     {
-                        p = PointXYHSL(i,j, 70,0,0);  
+                        p = PointXY(i,j, 70,0,0);  
                     }
                     else if ( l > 0 and l <= nPiezasAzul )
                     {
-                        p = PointXYHSL(i,j, 100,0,0);  
+                        p = PointXY(i,j, 100,0,0);  
                     }
                     shapes[l-1].push_back(p);
                 }
@@ -365,7 +397,7 @@ cv::Mat ImageColorSegmentation::processFrame()
     // Filtering those shapes which area does not meet a minimun size
     for(int i = 0; i < shapes.size(); i++) 
     {
-        if(shapes[i].pointList.size() < 500)
+        if(shapes[i].pointList.size() < areaFilter)
         {
             shapes.erase(shapes.begin() + i);
             i--;
@@ -379,7 +411,7 @@ cv::Mat ImageColorSegmentation::processFrame()
     for(int i = 0; i < shapes.size(); i++) 
     {
         cv::Point c = shapes[i].getCentroid();
-        std::string semColor = shapes[i].getSemanticAverageColor();
+        std::string semColor = shapes[i].getSemanticAverageColorHLS();
 
         std::cout << i << " (" << c.x << ", " << c.y << ") " << semColor << " " << shapes[i].getAverageColor() << " " << shapes[i].pointList.size() << std::endl;
 
@@ -393,14 +425,102 @@ cv::Mat ImageColorSegmentation::processFrame()
 
 }
 
+cv::Mat ImageColorSegmentation::processFrameLAB(cv::Mat &markers, double max)
+{
+    cv::Size tam = markers.size();
+    cv::Mat color_LAB;
+    cv::Mat color_resized;
+    /*resize(image_color_, color_resized, cv::Size(640,480));
+    cv::namedWindow("ColorHSVPrueba", cv::WINDOW_NORMAL);
+    cv::imshow("ColorHSVPrueba", color_resized);*/
+    // Convert color image to HSV Scheme for easier color classfication
+   
+    cvtColor(image_color_, color_LAB, cv::COLOR_BGR2Lab);
+    //cv::Mat color_resized;
+    resize(color_LAB, color_resized, cv::Size(640,480));
+    cv::namedWindow("ColorLAB", cv::WINDOW_NORMAL);
+    cv::imshow("ColorLAB", color_resized);
+    
+    // Masking the image with color per BG and SHAPES
+    cv::Mat color_mask;
+    image_color_.copyTo(color_mask);
+
+    /*PROBEEE! for(int row = 0; row < color_LAB.rows;row++)
+      {
+        const uchar * ptr = (uchar *)color_LAB.data ;//+ row*color_LAB.)
+        for(int col = 0; col < color_LAB.cols;col++)
+          {
+            std::cout<<"int = " <<std::endl <<" " <<(int)* ptr <<std::endl<<std::endl;
+            
+          }
+
+      }
+    */
+
+
+      std::vector<Shape> shapes(max);
+
+
+    // Creating the color mask by coloring shapes and BG
+    for(int i = 0; i < tam.height; i++)
+      {
+        for(int j = 0; j < tam.width; j++)
+          {
+            if (markers.at<int>(i,j) == 1) // background
+              {
+                // color_mask.at<cv::Vec3b>(i,j) = cv::Vec3b(0,255,0);
+              }
+
+            for(int l = 2; l <= max+1; l++)
+              {
+                if (markers.at<int>(i,j) == l) // shape
+                  {
+                    PointXY p(i,j, color_LAB.at<cv::Vec3b>(i,j)[0], color_LAB.at<cv::Vec3b>(i,j)[1], color_LAB.at<cv::Vec3b>(i,j)[2]);
+
+                    shapes[l-2].push_back(p);
+
+                    // color_mask.at<cv::Vec3b>(i,j) = cv::Vec3b(127,0,0);
+                  }
+              }
+
+          }
+      }
+    resize(color_mask, color_resized, cv::Size(640,480));
+    //cv::namedWindow("ColorMask", cv::WINDOW_NORMAL);
+    //cv::imshow("ColorMask", color_resized);
+    for(int i = 0; i < max; i++) // color classification, centroid calcs and outputs
+      {
+        cv::Point c = shapes[i].getCentroid();
+        std::string semColor = shapes[i].getSemanticAverageColorLAB();
+
+        std::cout << "(" << c.x << ", " << c.y << ") " << semColor << std::endl;
+
+        circle(color_mask, c, 10, 0, -1);
+        putText(color_mask, semColor, c, cv::FONT_HERSHEY_SIMPLEX, 5, cvScalar(0,0,0), 5);
+      }
+
+    return color_mask;
+}
+
 // Calls the color segmentation process. Indirection level added for some preprocessing to be made here.
-bool ImageColorSegmentation::process(cv::Mat &frame)
+bool ImageColorSegmentation::process(int hls_lab, cv::Mat &frame)
 {
 
-    frame = processFrame();
+    frame = preProcessFrame(hls_lab);
  
     return true;
 }
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 
 
 
