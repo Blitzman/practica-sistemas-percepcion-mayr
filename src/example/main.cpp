@@ -5,8 +5,9 @@
 
 int main(int argc, char** argv)
 {
-	ImageShapeSegmentation iss_(1, "../resources/Video_5/output-%04d.png");
+	ImageShapeSegmentation iss_(1, "../resources/Video_2/output-%04d.jpg");
 	//ImageShapeSegmentation iss_(0, "../../../resources/Picture_21.jpg");
+	//ImageShapeSegmentation iss_(0, "../resources/Video_2/output-0047.jpg");
 
 	cv::Mat frame_;
 	cv::Size size_(640, 480);
