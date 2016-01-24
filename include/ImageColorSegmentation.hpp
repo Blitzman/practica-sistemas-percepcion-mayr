@@ -4,6 +4,9 @@
 #include <iostream>
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 #include "PointXYHSL.hpp"
 #include "Shape.hpp"
@@ -22,19 +25,22 @@ private:
     cv::Mat sure_fg_;          // Sure Foreground area
     cv::Mat unknown_;          // Unknown area between surefg and surebg
 
+    bool showHistogram;
+
     cv::Mat processFrame();     // Process the current frame
 
 
 public:
     ImageColorSegmentation(std::string path);
     bool process(cv::Mat &mat);            // Process the current frame and returns the color mask
+    void setHistogramOutput(bool);
 
 };
 
 ImageColorSegmentation::ImageColorSegmentation(std::string path)
 {
     this->path = path;
-
+    showHistogram = false;
     image_ = cv::imread(path);
 
     if (!image_.data)
@@ -42,6 +48,11 @@ ImageColorSegmentation::ImageColorSegmentation(std::string path)
         std::cout << "No image data \n";
         return;
     }
+}
+
+void ImageColorSegmentation::setHistogramOutput(bool v)
+{
+    showHistogram = v;
 }
 
 
@@ -56,29 +67,96 @@ cv::Mat ImageColorSegmentation::processFrame()
         exit(0);
     }
 
-
     image_.copyTo(image_color_);
 
     // Convert color image to HSV Scheme for easier color classfication
     cv::Mat color_HSV;
     cvtColor(image_color_, color_HSV, cv::COLOR_BGR2HLS);
 
-    // Correcting the BG whitening it
+    // Working on HLS image
+    std::vector<cv::Mat> hslChan2;
+    cv::split(color_HSV, hslChan2); // Splitting channels
+
+
+    // Calculate histogram, Avg and deviation for automatic BG subtraction
+    int histSize = 256;    // bin size
+    float range[] = { 0, 255 };
+    const float *ranges[] = { range };
+ 
+    cv::MatND hist;
+    cv::calcHist( &hslChan2[1], 1, 0, cv::Mat(), hist, 1, &histSize, ranges, true, false );
+
+    double total;
+    int globalMax = 0;
+    int globalMaxIdx = 0;
+    total = image_.rows * image_.cols;
+    double avg;
+    double xi2Fi;
+    double deviation;
+    for( int h = 0; h < histSize; h++ )
+     {
+        float binVal = hist.at<float>(h);
+
+        avg += h*binVal;
+        xi2Fi +=h*h*binVal;
+
+        if (binVal > globalMax)
+        {
+            globalMax = binVal;
+            globalMaxIdx = h;
+        }
+     }
+     avg/=total;
+     deviation = sqrt( xi2Fi/total - avg*avg );
+     std::cout<<globalMaxIdx<<" " <<avg<< " " << deviation <<std::endl;;
+ 
+    // Plot the histogram
+    int hist_w = 512; int hist_h = 400;
+    int bin_w = cvRound( (double) hist_w/histSize );
+ 
+    cv::Mat histImage( hist_h, hist_w, CV_8UC1, cv::Scalar( 0,0,0) );
+    cv::normalize(hist, hist, 0, histImage.rows, cv::NORM_MINMAX, -1, cv::Mat() );
+
+    if(showHistogram)
+    {
+        for( int i = 1; i < histSize; i++ )
+        {
+          cv::line( histImage, cv::Point( bin_w*(i-1), hist_h - cvRound(hist.at<float>(i-1)) ) ,
+                           cv::Point( bin_w*(i), hist_h - cvRound(hist.at<float>(i)) ),
+                           cv::Scalar( 255, 0, 0), 2, 8, 0  );
+        }
+
+        cv::line( histImage, cv::Point( bin_w*(avg), hist_h ) ,
+                           cv::Point( bin_w*(avg), hist_h - 1000 ),
+                           cv::Scalar( 255, 0, 0), 2, 8, 0  );
+        cv::line( histImage, cv::Point( bin_w*(avg+deviation), hist_h ) ,
+                           cv::Point( bin_w*(avg+deviation), hist_h - 1000 ),
+                           cv::Scalar( 255, 0, 0), 2, 8, 0  );
+        cv::line( histImage, cv::Point( bin_w*(avg-deviation), hist_h ) ,
+                           cv::Point( bin_w*(avg-deviation), hist_h - 1000 ),
+                           cv::Scalar( 255, 0, 0), 2, 8, 0  );
+ 
+        cv::namedWindow( "Result", 1 );    cv::imshow( "Result", histImage );
+        cv::waitKey(25);
+    }
+
+
+     // Correcting the BG by whitening the values between [avg+deviation, avg-deviation]
     for(int i = 0; i < image_.size().height; i++)
     {
         for(int j = 0; j < image_.size().width; j++)
         {
-            if(color_HSV.at<cv::Vec3b>(i,j)[1] < 13)
+            if(color_HSV.at<cv::Vec3b>(i,j)[1] < avg+deviation && color_HSV.at<cv::Vec3b>(i,j)[1] > avg-deviation)
             {
                 color_HSV.at<cv::Vec3b>(i,j)[1] = 200;
             }
         }
-    }
+    } 
 
     // Back to RGB
     cvtColor(color_HSV, image_, cv::COLOR_HLS2BGR);
 
-    // Convert to grayscale
+    // And greyscale 
     cvtColor(image_, image_, cv::COLOR_BGR2GRAY );
 
     // Tresholding image binary inverted and otsu's method
@@ -102,19 +180,6 @@ cv::Mat ImageColorSegmentation::processFrame()
     // Geeting unknown region bu subtracting the sureFG from sureBG
     sure_fg_.convertTo(sure_fg_, CV_8U);
     subtract(sure_bg_, sure_fg_, unknown_);
-
-
-
-    
-    /*cv::Mat resized;
-    cv::Size size(640, 480);
-    resize(dist_transform, resized, size);
-    cv::imshow("DisplayWindow", resized ); 
-    cv::waitKey(0);*/
-
-
-
-
 
     // Labelling the blobs
     cv::Mat markers;
