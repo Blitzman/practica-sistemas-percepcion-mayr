@@ -29,14 +29,14 @@ private:
 
     bool showHistogram;
 
-    cv::Mat processFrameHLV(cv::Mat &color_HSV, cv::Mat &markers);     // Process the current frame
+    cv::Mat processFrameHLV(cv::Mat &color_HSV, cv::Mat &markers, std::vector<Shape> &shapes);     // Process the current frame
     cv::Mat processFrameLAB(cv::Mat &markers, double max);     // Process the current frame
-    cv::Mat preProcessFrame(int hls_lab);
+    cv::Mat preProcessFrame(int hls_lab, std::vector<Shape> &shapes);
 
 
 public:
     ImageColorSegmentation(std::string path);
-    bool process(int hls_lab, cv::Mat &mat);            // Process the current frame and returns the color mask
+    bool process(int hls_lab, cv::Mat &mat, std::vector<Shape> &shapes);            // Process the current frame and returns the color mask
     void setHistogramOutput(bool);                      // Wether show histogram or not
     void setAreaFilter(int areaFilter);
 
@@ -72,7 +72,7 @@ void ImageColorSegmentation::setAreaFilter(int v)
     areaFilter = v;
 }
 
-cv::Mat ImageColorSegmentation::preProcessFrame(int hls_lab)
+cv::Mat ImageColorSegmentation::preProcessFrame(int hls_lab, std::vector<Shape> &shapes)
 {
     // Reading the frame
     if (!image_.data)
@@ -225,7 +225,7 @@ cv::Mat ImageColorSegmentation::preProcessFrame(int hls_lab)
 
     cv::Mat ret;
         if(hls_lab == 0)
-            ret = processFrameHLV(color_HSV, markers);
+            ret = processFrameHLV(color_HSV, markers, shapes);
         else if (hls_lab == 1)
             ret = processFrameLAB(markers, max);
 
@@ -235,7 +235,7 @@ cv::Mat ImageColorSegmentation::preProcessFrame(int hls_lab)
 
 
 // Working hard on the image for color segmentation
-cv::Mat ImageColorSegmentation::processFrameHLV(cv::Mat &color_HSV, cv::Mat &markers)
+cv::Mat ImageColorSegmentation::processFrameHLV(cv::Mat &color_HSV, cv::Mat &markers, std::vector<Shape> &shapes)
 {
 
     // Working on HLS image
@@ -360,7 +360,8 @@ cv::Mat ImageColorSegmentation::processFrameHLV(cv::Mat &color_HSV, cv::Mat &mar
 
     // List of shapes
     int nPiezas = max; 
-    std::vector<Shape> shapes(nPiezas);
+    //std::vector<Shape> shapes(nPiezas);
+    shapes = std::vector<Shape> (nPiezas);
 
     // Masking the image with color per BG and SHAPES
     cv::Mat color_mask;
@@ -513,10 +514,10 @@ cv::Mat ImageColorSegmentation::processFrameLAB(cv::Mat &markers, double max)
 }
 
 // Calls the color segmentation process. Indirection level added for some preprocessing to be made here.
-bool ImageColorSegmentation::process(int hls_lab, cv::Mat &frame)
+bool ImageColorSegmentation::process(int hls_lab, cv::Mat &frame, std::vector<Shape> &shapes)
 {
 
-    frame = preProcessFrame(hls_lab);
+    frame = preProcessFrame(hls_lab, shapes);
  
     return true;
 }
