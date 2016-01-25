@@ -25,8 +25,11 @@ public:
     return true;
 	}
 
+	inline std::vector<Shape> get_shapes() { return m_shapes; };
+
 private:
 
+	std::vector<Shape> m_shapes;
 	std::string m_path;
 	cv::Mat m_image;
 
@@ -60,15 +63,12 @@ private:
 		// Binary thresholding + OTSU
 		double threshold_value_ =	cv::threshold(image_, image_, 0, 255, cv::THRESH_BINARY_INV+cv::THRESH_OTSU);
 
-    	// Removing noises made by shadows/lights by opening and closing
+    // Removing noises made by shadows/lights by opening and closing
 		cv::Mat kernel_ = cv::Mat::ones(cv::Size(3,3), CV_8U);
 		cv::Mat opening_;
 		morphologyEx(image_, opening_, cv::MORPH_OPEN, kernel_, cv::Point(-1,-1), 2);
 		morphologyEx(opening_, opening_, cv::MORPH_CLOSE, kernel_, cv::Point(-1,-1), 2);
 		cv::threshold(opening_, opening_, 128, 255, cv::THRESH_BINARY);
-
-
-		
 
 		// Find contours
 		std::vector<std::vector<cv::Point>> contours_;
@@ -76,7 +76,7 @@ private:
 		cv::findContours(contour_output_, contours_, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
 		std::vector<std::vector<cv::Point>> contours_poly_(contours_.size());
-		std::vector<Shape> shapes_(contours_.size());
+		m_shapes.resize(contours_.size());
 
 		for (unsigned int i = 0; i < contours_.size(); ++i)
 		{
@@ -87,16 +87,15 @@ private:
 			//if (contours_poly_[i].size() < 8 || contours_poly_[i].size() == 12)
 			//{
 				for (cv::Point p_: contours_poly_[i])
-					shapes_[i].add_vertex(p_);
+					m_shapes[i].add_vertex(p_);
 
-				shapes_[i].postprocess();
+				m_shapes[i].postprocess();
 
-				//shapes_[i].draw_contour(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
-				//shapes_[i].draw_name(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
+				//m_shapes[i].draw_contour(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
+				//m_shapes[i].draw_name(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
 			//}
 
 		}
-
 
 		// Circle detection
 		cv::Mat hough_input_;
@@ -111,14 +110,14 @@ private:
 			cv::Point center_(cvRound(circles_[i][0]), cvRound(circles_[i][1]));
 			int radius_ = cvRound(circles_[i][2]);
 
-			for (unsigned int j = 0; j < shapes_.size(); ++j)
+			for (unsigned int j = 0; j < m_shapes.size(); ++j)
 			{
-				std::cout << shapes_[j].get_semantic_shape() << std::endl;
-				if (shapes_[j].pointWithinPolygon(center_) && (shapes_[j].getVertexCount() >= 8 && shapes_[j].getVertexCount() != 12)) // The circle replaces the shape
-					shapes_.erase(shapes_.begin() + j);
+				std::cout << m_shapes[j].get_semantic_shape() << std::endl;
+				if (m_shapes[j].pointWithinPolygon(center_) && (m_shapes[j].getVertexCount() >= 8 && m_shapes[j].getVertexCount() != 12)) // The circle replaces the shape
+					m_shapes.erase(m_shapes.begin() + j);
 
-				//else if (shapes_[j].getVertexCount() >= 8 && shapes_[j].getVertexCount() != 12) // Convert to ellipse
-				//	shapes_[j].convertToEllipse();
+				//else if (m_shapes[j].getVertexCount() >= 8 && m_shapes[j].getVertexCount() != 12) // Convert to ellipse
+				//	m_shapes[j].convertToEllipse();
 			}
 			
 			Shape circle_;
@@ -127,29 +126,25 @@ private:
 
 			circle_.postprocess();
 
-			shapes_.push_back(circle_);
+			m_shapes.push_back(circle_);
 		}
 
-
 		//Ellipses
-		for (unsigned int i = 0; i < shapes_.size(); ++i)
+		for (unsigned int i = 0; i < m_shapes.size(); ++i)
 		{
-			if (shapes_[i].getVertexCount() >= 8 && shapes_[i].getVertexCount() != 12)
+			if (m_shapes[i].getVertexCount() >= 8 && m_shapes[i].getVertexCount() != 12)
 			{
-				shapes_[i].convertToEllipse();
+				m_shapes[i].convertToEllipse();
 			}
 		}
 
-
-
 		//Drawing
-		for (unsigned int i = 0; i < shapes_.size(); ++i)
+		for (unsigned int i = 0; i < m_shapes.size(); ++i)
 		{
-			shapes_[i].draw_contour(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
-			shapes_[i].draw_name(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
-			shapes_[i].draw_box(image_color_, cv::Scalar(0, 0, 0));
+			m_shapes[i].draw_contour(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()));
+			m_shapes[i].draw_name(image_color_, cv::Scalar(0, 0, 50 + i * 205 / contours_.size()), i);
+			m_shapes[i].draw_box(image_color_, cv::Scalar(0, 0, 0));
 		}
-		
 
 		return image_color_;
 	}

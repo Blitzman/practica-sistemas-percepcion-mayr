@@ -252,10 +252,24 @@ public:
 		std::ostringstream area_;
 		area_ << std::fixed << std::setprecision(1) << m_area;
 
-		cv::putText(rImage, get_semantic_shape() + ":" + area_.str(),//std::to_string(m_area),
+		cv::putText(rImage, getSemanticAverageColorHSV() + " " + get_semantic_shape() + ":" + area_.str(),//std::to_string(m_area),
 				get_vertex_centroid(), cv::FONT_HERSHEY_SIMPLEX, 3, crColor, 5);
 
-		std::cout << get_semantic_shape() << ": " << m_area << std::endl;
+		std::cout << getSemanticAverageColorHSV() << " " << get_semantic_shape() << ": " << m_area << std::endl;
+		std::cout << " at " << get_vertex_centroid().x << "," << get_vertex_centroid().y << "\n";
+	}
+
+	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor, const int & id_)
+	{
+
+		std::ostringstream area_;
+		area_ << std::fixed << std::setprecision(1) << m_area;
+
+		cv::putText(rImage, std::to_string(id_) + " " + getSemanticAverageColorHSV() + " " + get_semantic_shape() + ":" + area_.str(),//std::to_string(m_area),
+				get_vertex_centroid(), cv::FONT_HERSHEY_SIMPLEX, 3, crColor, 5);
+
+		std::cout << getSemanticAverageColorHSV() << " " << get_semantic_shape() << ": " << m_area << std::endl;
+		std::cout << " at " << get_vertex_centroid().x << "," << get_vertex_centroid().y << "\n";
 	}
 
 	bool isSquare ()
