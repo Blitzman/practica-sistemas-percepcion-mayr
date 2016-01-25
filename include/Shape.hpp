@@ -2,6 +2,7 @@
 #define SHAPE_HPP_
 
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <vector>
 #include <opencv2/opencv.hpp>
@@ -14,6 +15,7 @@ public:
   Shape()
 	{
 		m_radius = -1;
+		m_isEllipse = false;
   }
 
   cv::Point getCentroid()
@@ -57,10 +59,14 @@ public:
 
 		if (m_radius > 0)
 			shape_name_ = "circle";
+		if (m_radius < 0 && m_isEllipse)
+			shape_name_ = "ellipse";
 		if (v_ == 3)
 			shape_name_ = "triangle";
-		else if (v_ == 4)
+		else if (v_ == 4 && isSquare())
 			shape_name_ = "square";
+		else if (v_ == 4 && !isSquare())
+			shape_name_ = "rhombus";
 		else if (v_ == 5)
 			shape_name_ = "pentagon";
 		else if (v_ == 6)
@@ -119,8 +125,9 @@ public:
 
 	void postprocess ()
 	{
+
 		// Not a circle
-		if (m_radius < 0 && m_vertices.size() <= 6)
+		if (m_radius < 0 )//&& (m_vertices.size() <= 6 || m_vertices.size() == 12))
 		{
 			float avg_side_ = 0.0f;
 			for (unsigned int i = 0; i < m_vertices.size(); ++i)
@@ -142,41 +149,163 @@ public:
 			}
 
 			m_area = cv::contourArea(m_vertices);
+
+			// BoundingBox
+			m_bounding_box = cv::minAreaRect(m_vertices);
+		}
+
+		// A circle
+		if (m_radius > 0)
+		{
+			m_area = (double)M_PI * pow(m_radius, 2);
+
+			// BoundingBox
+			std::vector<cv::Point> points_;
+			cv::Point center_ = m_vertices[0];
+
+			for (unsigned int i = 0; i < 4; ++i)
+				points_.push_back(center_);
+
+			points_[0].x = points_[0].x - m_radius;
+			points_[0].y = points_[0].y - m_radius;
+			points_[1].x = points_[1].x + m_radius;
+			points_[1].y = points_[1].y + m_radius;
+			points_[2].x = points_[2].x + m_radius;
+			points_[2].y = points_[2].y - m_radius;
+			points_[3].x = points_[3].x - m_radius;
+			points_[3].y = points_[3].y + m_radius;
+
+
+			m_bounding_box = cv::minAreaRect(points_);
 		}
 	}
 
-  void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
-  {
+  	void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
+  	{
 		if (m_radius > 0.0)
 		{
 			cv::circle(rImage, m_vertices[0], 3, crColor, -1, 8, 0 );
-			cv::circle(rImage, m_vertices[0], m_radius, crColor, 3, 8, 0);
+			cv::circle(rImage, m_vertices[0], m_radius, crColor, 10, 8, 0);
+		}
+		else if (m_isEllipse)
+		{
+			cv::ellipse(rImage, m_bounding_box, crColor, 10, CV_AA);
+			cv::circle(rImage, m_bounding_box.center, 3, crColor, -1, 8, 0);
+        	//cv::ellipse(rImage, m_bounding_box.center, m_bounding_box.size*0.5f, m_bounding_box.angle, 0, 360, crColor, 1, CV_AA);
 		}
 		else
 		{
 			for (unsigned int i = 0; i < m_vertices.size()-1; ++i)
-      {
-        cv::line(rImage, m_vertices[i], m_vertices[i+1], crColor, 10);
-      }
+      		{
+        		cv::line(rImage, m_vertices[i], m_vertices[i+1], crColor, 10);
+      		}
 
 			if (m_vertices.size() > 2)
 				cv::line(rImage, m_vertices[m_vertices.size()-1], m_vertices[0], crColor, 10);
 
 			cv::circle(rImage, get_vertex_centroid(), 3, crColor, -1, 8, 0);
 		}
-  }
+  	}
+
+	void draw_box (cv::Mat & rImage, const cv::Scalar & crColor)
+	{
+		cv::Point2f rect_vertex_[4];
+
+		m_bounding_box.points(rect_vertex_);
+
+		for (unsigned int i = 0; i < 4; ++i)
+		{
+			cv::line(rImage, rect_vertex_[i], rect_vertex_[(i+1)%4], crColor, 2);
+		}
+	}
 
 	void draw_name (cv::Mat & rImage, const cv::Scalar & crColor)
 	{
-		cv::putText(rImage, get_semantic_shape() + ":" + std::to_string(m_area),
+
+		std::ostringstream area_;
+		area_ << std::fixed << std::setprecision(1) << m_area;
+
+		cv::putText(rImage, get_semantic_shape() + ":" + area_.str(),//std::to_string(m_area),
 				get_vertex_centroid(), cv::FONT_HERSHEY_SIMPLEX, 3, crColor, 5);
+
+		std::cout << get_semantic_shape() << ": " << m_area << std::endl;
 	}
 
+	bool isSquare ()
+	{
+		if (m_vertices.size() == 4)
+		{
+			cv::Point point_, u_, v_;
+			double angle_;
+
+			for (unsigned int i = 0; i < m_vertices.size(); ++i)
+			{
+				point_ = m_vertices[i];
+				u_ = m_vertices[i] - m_vertices[(i + 3) % m_vertices.size()];
+				v_ = m_vertices[i] - m_vertices[(i + 1) % m_vertices.size()];
+
+				angle_ += acos(abs(u_.x * v_.x + u_.y * v_.y) / (sqrt(pow(u_.x,2) + pow(u_.y,2)) * sqrt(pow(v_.x,2) + pow(v_.y,2)))) * 180.0 / M_PI;
+			}
+
+			if (abs((angle_ / m_vertices.size()) - 90) <= 5)
+				return true;
+		}
+
+		return false;
+	}
+
+	bool pointWithinPolygon(const cv::Point & crPoint)
+	{
+		
+		cv::Point2f rect_vertex_[4];
+
+		m_bounding_box.points(rect_vertex_);
+
+		cv::Point min_, max_;
+
+		min_.x = rect_vertex_[0].x;
+		max_.x = rect_vertex_[0].x;
+		min_.y = rect_vertex_[0].y;
+		max_.y = rect_vertex_[0].y;
+
+		for (unsigned int i = 0; i < 4; ++i)
+		{
+			if(rect_vertex_[i].x < min_.x)
+				min_.x = rect_vertex_[i].x;
+
+			if(rect_vertex_[i].x > max_.x)
+				max_.x = rect_vertex_[i].x;
+
+			if(rect_vertex_[i].y < min_.y)
+				min_.y = rect_vertex_[i].y;
+
+			if(rect_vertex_[i].y > max_.y)
+				max_.y = rect_vertex_[i].y;
+		}
+
+
+		if ((crPoint.x > min_.x) && (crPoint.x < max_.x) &&
+			(crPoint.y > min_.y && crPoint.y < max_.y))
+				return true;
+		
+		return false;
+	}
+
+	void convertToEllipse()
+	{
+		m_bounding_box = cv::fitEllipse(m_vertices);
+		m_isEllipse = true;
+	}
+
+	int getVertexCount() { return m_vertices.size(); }
+
 private:
-  std::vector<PointXY> m_point_list;
-  std::vector<cv::Point> m_vertices;
+	cv::RotatedRect m_bounding_box;
+  	std::vector<PointXY> m_point_list;
+  	std::vector<cv::Point> m_vertices;
 	int m_radius;
 	double m_area;
+	bool m_isEllipse;
 };
 
 #endif
