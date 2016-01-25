@@ -12,43 +12,14 @@ class ImageShapeSegmentation
 {
 public:
 
-	static const int ICS_IMAGE = 0;
-	static const int ICS_VIDEO = 1;
-
-	ImageShapeSegmentation(const int & crIcsFormat, const std::string & crPath)
+	ImageShapeSegmentation(const std::string & crPath)
 	{
-		m_ics_format = crIcsFormat;
 		m_path = crPath;
-
-    if(m_ics_format == 0)
-    {
-			m_image = cv::imread(m_path);
-    } 
-		else
-		{
-			m_vcap = cv::VideoCapture(m_path);
-    }
+		m_image = cv::imread(m_path);
 	}
 
 	bool process(cv::Mat & rFrame)
 	{
-    if(m_ics_format == 1)
-    {
-			if(m_vcap.read(m_image))
-      {
-				if (!m_image.data)
-        {
-					std::cerr << "No image data \n";
-          return false;
-        }
-      }
-      else 
-			{
-				std::cerr << "No image read...\n";
-				return false;
-			}
-    }
-
     rFrame = processFrame();
  
     return true;
@@ -56,10 +27,8 @@ public:
 
 private:
 
-	int m_ics_format;
 	std::string m_path;
 	cv::Mat m_image;
-	cv::VideoCapture m_vcap;
 
 	cv::Mat processFrame()
 	{

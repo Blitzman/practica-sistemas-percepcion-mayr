@@ -23,10 +23,6 @@ std::vector<std::string> globVector(const std::string& pattern){
 
 int main(int argc, char** argv )
 {
-	ImageShapeSegmentation iss_(1, "../resources/Video_2/output-%04d.jpg");
-	//ImageShapeSegmentation iss_(0, "../../../resources/Picture_21.jpg");
-	//ImageShapeSegmentation iss_(0, "../resources/Video_2/output-0047.jpg");
-
   std::vector<std::string> files = globVector("../resources/*");
 
   cv::Size size(640, 480);
@@ -40,8 +36,17 @@ int main(int argc, char** argv )
     cv::Mat color_resized;
     resize(frame, color_resized, size);
     cv::namedWindow( "DisplayWindow" ); // Create a window for display.
-    cv::imshow("DisplayWindow", color_resized ); 
-		cv::waitKey(25);
+    cv::imshow("DisplayWindow", color_resized );
+
+		cv::Mat frame_shape_;
+		ImageShapeSegmentation iss_(files[i]);
+		iss_.process(frame_shape_);
+		cv::Mat shape_resized_;
+		resize(frame_shape_, shape_resized_, size);
+		cv::namedWindow("DisplayWindow2");
+		cv::imshow("DisplayWindow2", shape_resized_);
+
+		cv::waitKey(0);
   }
   cv::waitKey(0); // */
 
