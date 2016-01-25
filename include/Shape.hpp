@@ -72,10 +72,12 @@ public:
 			shape_name_ = "ellipse";
 		if (v_ == 3)
 			shape_name_ = "triangle";
-		else if (v_ == 4 && isSquare())
+		else if (v_ == 4 && isSquare() == 2)
 			shape_name_ = "square";
-		else if (v_ == 4 && !isSquare())
+		else if (v_ == 4 && isSquare() == 3)
 			shape_name_ = "rhombus";
+		else if (v_ == 4 && isSquare() == 1)
+			shape_name_ = "rectangle";
 		else if (v_ == 5)
 			shape_name_ = "pentagon";
 		else if (v_ == 6)
@@ -195,12 +197,12 @@ public:
 
 			points_[0].x = points_[0].x - m_radius;
 			points_[0].y = points_[0].y - m_radius;
-			points_[1].x = points_[1].x + m_radius;
+			points_[1].x = points_[1].x - m_radius;
 			points_[1].y = points_[1].y + m_radius;
 			points_[2].x = points_[2].x + m_radius;
-			points_[2].y = points_[2].y - m_radius;
-			points_[3].x = points_[3].x - m_radius;
-			points_[3].y = points_[3].y + m_radius;
+			points_[2].y = points_[2].y + m_radius;
+			points_[3].x = points_[3].x + m_radius;
+			points_[3].y = points_[3].y - m_radius;
 
 
 			m_bounding_box = cv::minAreaRect(points_);
@@ -242,7 +244,7 @@ public:
 
 		for (unsigned int i = 0; i < 4; ++i)
 		{
-			cv::line(rImage, rect_vertex_[i], rect_vertex_[(i+1)%4], crColor, 2);
+			cv::line(rImage, rect_vertex_[i], rect_vertex_[(i+1)%4], crColor, 3);
 		}
 	}
 
@@ -272,12 +274,18 @@ public:
 		std::cout << " at " << get_vertex_centroid().x << "," << get_vertex_centroid().y << "\n";
 	}
 
-	bool isSquare ()
+	// 1 -> todos los angulos 90
+	// 2 -> angulos 90 y lados iguales
+	// 3 -> lados iguales
+	// 0 -> nada de lo anterior
+	int isSquare ()
 	{
 		if (m_vertices.size() == 4)
 		{
 			cv::Point point_, u_, v_;
-			double angle_;
+			double angle_ = 0;
+			std::vector<double> size_;
+			double std_dev_ = 0;
 
 			for (unsigned int i = 0; i < m_vertices.size(); ++i)
 			{
@@ -288,11 +296,31 @@ public:
 				angle_ += acos(abs(u_.x * v_.x + u_.y * v_.y) / (sqrt(pow(u_.x,2) + pow(u_.y,2)) * sqrt(pow(v_.x,2) + pow(v_.y,2)))) * 180.0 / M_PI;
 			}
 
-			if (abs((angle_ / m_vertices.size()) - 90) <= 5)
-				return true;
+
+			for (unsigned int i = 0; i < 4; ++i)
+			{
+
+				size_.push_back(cv::norm(m_vertices[(i + 1) % m_vertices.size()] - m_vertices[i]));
+				//size_[i] = sqrt(
+				//		pow(m_vertices[(i + 1) % m_vertices.size()].x - m_vertices[i].x, 2) +
+				//		pow(m_vertices[(i + 1) % m_vertices.size()].y - m_vertices[i].y, 2));
+			}
+
+
+			std_dev_ = standardDeviation(size_);
+
+
+			if ((abs((angle_ / m_vertices.size()) - 90)  <= 5.0) && std_dev_ <= 20.0)
+				return 2;
+
+			if (abs((angle_ / m_vertices.size()) - 90) <= 5.0)
+				return 1;
+
+			if (std_dev_ <= 20.0)
+				return 3;
 		}
 
-		return false;
+		return 0;
 	}
 
 	bool pointWithinPolygon(const cv::Point & crPoint)
@@ -336,6 +364,30 @@ public:
 	{
 		m_bounding_box = cv::fitEllipse(m_vertices);
 		m_isEllipse = true;
+	}
+
+	double standardDeviation(const std::vector<double> & crdata_)
+	{
+
+		double sum_ = 0, 
+				deviation_ = 0, 
+				mean_ = 0;
+
+		for(unsigned int i = 0; i < crdata_.size(); ++i)
+		{
+			mean_ += crdata_[i];
+		}
+
+		mean_ = mean_ / crdata_.size();
+
+
+		for(unsigned int i = 0; i < crdata_.size(); ++i)
+			sum_ += (double(mean_ - crdata_[i])) * (double(mean_ - crdata_[i]));
+
+		deviation_ = sqrt(double(sum_ / crdata_.size() - 1)) ;
+
+	
+		return deviation_;
 	}
 
 	int getVertexCount() { return m_vertices.size(); }
