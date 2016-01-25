@@ -12,21 +12,30 @@ class Shape
 {
 public:
 
+  std::vector<PointXY> m_point_list;
+
   Shape()
 	{
 		m_radius = -1;
 		m_isEllipse = false;
   }
 
+	Shape(std::vector<PointXY> points)
+	{
+		m_point_list = points;
+		m_radius = -1;
+		m_isEllipse = false;
+	}
+
   cv::Point getCentroid()
   {
     std::pair<int,int> centroid;
 
-    for(unsigned short i = 0; i < m_point_list.size(); ++i)
-      {
-        centroid.first += m_point_list[i].x;
-        centroid.second += m_point_list[i].y;
-      }
+    for(unsigned int i = 0; i < m_point_list.size(); ++i)
+    {
+			centroid.first += m_point_list[i].x;
+			centroid.second += m_point_list[i].y;
+    }
 
     centroid.first /= m_point_list.size();
     centroid.second /= m_point_list.size();
@@ -83,23 +92,41 @@ public:
     return point_.getSemanticColorHSV();
   }
 
-   std::string getSemanticAverageColorLAB()
+	std::string getSemanticAverageColorHLS()
+	{
+		PointXY p_ = getAverageColor();
+    float hue = p_.values[0];
+    float sat = p_.values[2];
+    float lgt = p_.values[1];
+
+    //if (lgt < 0.2)  return "Black";
+    //if (lgt > 0.8)  return "Whites";
+    //if (sat < 0.25) return "Gray";
+
+    if (hue < 40)   return "Red";
+    //if (hue < 90)   return "Yellows";
+    if (hue < 80)  return "Green";
+    //if (hue < 210)  return "Cyan";
+    if (hue < 150)  return "Blue";
+    if (hue < 255)  return "Magent";
+	}
+
+  std::string getSemanticAverageColorLAB()
   {
     PointXY point_ = getAverageColor();
     return point_.getSemanticColorLAB();
   }
 
-
   PointXY getAverageColor()
   {
     PointXY color_avg_;
 
-    for(unsigned short i = 0; i < m_point_list.size(); ++i)
-      {
-        color_avg_.values[0] += m_point_list[i].values[0];
-        color_avg_.values[1] += m_point_list[i].values[1];
-        color_avg_.values[2] += m_point_list[i].values[2];
-      }
+    for(unsigned int i = 0; i < m_point_list.size(); ++i)
+    {
+      color_avg_.values[0] += m_point_list[i].values[0];
+      color_avg_.values[1] += m_point_list[i].values[1];
+			color_avg_.values[2] += m_point_list[i].values[2];
+    }
 
     color_avg_.values[0] /= m_point_list.size();
     color_avg_.values[1] /= m_point_list.size();
@@ -180,8 +207,8 @@ public:
 		}
 	}
 
-  	void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
-  	{
+  void draw_contour (cv::Mat & rImage, const cv::Scalar & crColor)
+  {
 		if (m_radius > 0.0)
 		{
 			cv::circle(rImage, m_vertices[0], 3, crColor, -1, 8, 0 );
@@ -205,7 +232,7 @@ public:
 
 			cv::circle(rImage, get_vertex_centroid(), 3, crColor, -1, 8, 0);
 		}
-  	}
+  }
 
 	void draw_box (cv::Mat & rImage, const cv::Scalar & crColor)
 	{
@@ -300,9 +327,9 @@ public:
 	int getVertexCount() { return m_vertices.size(); }
 
 private:
+
 	cv::RotatedRect m_bounding_box;
-  	std::vector<PointXY> m_point_list;
-  	std::vector<cv::Point> m_vertices;
+  std::vector<cv::Point> m_vertices;
 	int m_radius;
 	double m_area;
 	bool m_isEllipse;
