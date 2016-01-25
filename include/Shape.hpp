@@ -158,7 +158,7 @@ public:
 		// Not a circle
 		if (m_radius < 0 )//&& (m_vertices.size() <= 6 || m_vertices.size() == 12))
 		{
-			float avg_side_ = 0.0f;
+			/*float avg_side_ = 0.0f;
 			for (unsigned int i = 0; i < m_vertices.size(); ++i)
 			{
 				unsigned int j = (i == m_vertices.size() - 1) ? 0 : i+1;
@@ -175,7 +175,7 @@ public:
 					m_vertices.erase(m_vertices.begin()+i);
 					i--;
 				}
-			}
+			}*/
 
 			m_area = cv::contourArea(m_vertices);
 
